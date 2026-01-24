@@ -81,8 +81,9 @@ class Recommender:
         return [track['name'] for track in tracks]
 
 def main():
-    CLIENT_ID = '80f51630c7514a33ac2543343197745c'  
-    CLIENT_SECRET = '7dd34e6977b44b7186d27e3ca07b4e95'  
+    #Fake API Keys
+    CLIENT_ID = '80f51630c7514a33ac25646644486c'  
+    CLIENT_SECRET = '7dd34e6977b44b7185344474'  
     
     try:
         spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)
@@ -121,7 +122,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 class TestSpotifyRecommender(unittest.TestCase):
