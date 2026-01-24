@@ -4,7 +4,6 @@ Home Page: Project Overview and Key Features
 """
 
 import streamlit as st
-from pathlib import Path
 
 # Page configuration
 st.set_page_config(
