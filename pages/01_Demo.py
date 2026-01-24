@@ -195,66 +195,61 @@ def main():
                 # Scan button
                 if st.button("🔍 Start Security Scan", type="primary", use_container_width=True):
                     with st.spinner("🔄 Scanning for vulnerabilities..."):
+                        scanner = None
+                        tmp_path = None
                         try:
                             # Save uploaded file to temp location
                             with tempfile.NamedTemporaryFile(
                                 delete=False,
                                 suffix=Path(uploaded_file.name).suffix,
-                            scanner = None
-                            tmp_path = None
-                            try:
-                                # Save uploaded file to temp location
-                                with tempfile.NamedTemporaryFile(
-                                    delete=False,
-                                    suffix=Path(uploaded_file.name).suffix,
-                                    mode='wb'
-                                ) as tmp_file:
-                                    tmp_file.write(uploaded_file.read())
-                                    tmp_path = tmp_file.name
+                                mode='wb'
+                            ) as tmp_file:
+                                tmp_file.write(uploaded_file.read())
+                                tmp_path = tmp_file.name
 
-                                # Initialize scanner
-                                scanner = AICodeScanner(
-                                    use_snowflake=use_snowflake,
-                                    use_llm_analysis=use_llm_analysis,
-                                    llm_provider=llm_provider,
-                                    max_file_size_mb=max_file_size
-                                )
+                            # Initialize scanner
+                            scanner = AICodeScanner(
+                                use_snowflake=use_snowflake,
+                                use_llm_analysis=use_llm_analysis,
+                                llm_provider=llm_provider,
+                                max_file_size_mb=max_file_size
+                            )
 
-                                # Perform scan
-                                results = scanner.scan_file(
-                                    file_path=tmp_path,
-                                    scanned_by="streamlit_user",
-                                    generate_reports=True,
-                                    report_formats=report_formats
-                                )
+                            # Perform scan
+                            results = scanner.scan_file(
+                                file_path=tmp_path,
+                                scanned_by="streamlit_user",
+                                generate_reports=True,
+                                report_formats=report_formats
+                            )
 
-                                # Store results in session state
-                                st.session_state.scan_results = results
+                            # Store results in session state
+                            st.session_state.scan_results = results
 
-                                if results['success']:
-                                    st.success("✅ Scan completed successfully!")
-                                    st.balloons()
-                                else:
-                                    st.error(f"❌ Scan failed: {results.get('error', 'Unknown error')}")
-                            finally:
-                                # Ensure temporary file and scanner are always cleaned up
-                                try:
-                                    if tmp_path is not None and os.path.exists(tmp_path):
-                                        os.unlink(tmp_path)
-                                except Exception:
-                                    # Ignore temp file cleanup errors to avoid masking original issues
-                                    pass
-
-                                if scanner is not None:
-                                    try:
-                                        scanner.close()
-                                    except Exception:
-                                        # Ignore scanner close errors to avoid masking original issues
-                                        pass
+                            if results['success']:
+                                st.success("✅ Scan completed successfully!")
+                                st.balloons()
+                            else:
+                                st.error(f"❌ Scan failed: {results.get('error', 'Unknown error')}")
                         except Exception as e:
                             st.error(f"❌ Error during scan: {str(e)}")
                             import traceback
                             st.code(traceback.format_exc())
+                        finally:
+                            # Ensure temporary file and scanner are always cleaned up
+                            try:
+                                if tmp_path is not None and os.path.exists(tmp_path):
+                                    os.unlink(tmp_path)
+                            except Exception:
+                                # Ignore temp file cleanup errors to avoid masking original issues
+                                pass
+
+                            if scanner is not None:
+                                try:
+                                    scanner.close()
+                                except Exception:
+                                    # Ignore scanner close errors to avoid masking original issues
+                                    pass
         
         with col2:
             st.markdown("### Supported Languages")
