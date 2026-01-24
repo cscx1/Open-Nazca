@@ -8,7 +8,6 @@ import sys
 import os
 from pathlib import Path
 import tempfile
-import json
 
 # Add parent directory to path to import src modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
