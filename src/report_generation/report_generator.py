@@ -134,7 +134,7 @@ class ReportGenerator:
         output_file = Path(output_path)
         output_file.parent.mkdir(parents=True, exist_ok=True)
         
-        with open(output_file, 'w') as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             f.write(md_content)
         
         logger.info(f"✓ Generated Markdown report: {output_file}")
@@ -328,7 +328,7 @@ class ReportGenerator:
         output_file = Path(output_path)
         output_file.parent.mkdir(parents=True, exist_ok=True)
         
-        with open(output_file, 'w') as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
         logger.info(f"✓ Generated HTML report: {output_file}")

@@ -1,0 +1,251 @@
+{
+  "scan_info": {
+    "scan_id": "local-1769279055",
+    "file_name": "tmpx7ejuuge.py",
+    "language": "python",
+    "scan_timestamp": "2026-01-24 13:25:32",
+    "total_findings": 11
+  },
+  "summary": {
+    "total": 11,
+    "by_severity": {
+      "CRITICAL": 1,
+      "MEDIUM": 10
+    },
+    "by_type": {
+      "Prompt Injection": 1,
+      "Potential Hardcoded Secret": 1,
+      "Over-Privileged AI Tool": 9
+    }
+  },
+  "findings": [
+    {
+      "detector_name": "PromptInjectionDetector",
+      "vulnerability_type": "Prompt Injection",
+      "severity": "CRITICAL",
+      "line_number": 1470,
+      "code_snippet": "1467   |                     username = user_data.get(\"username\", \"Unknown user\")\n1468   |                     return {\n1469   |                         \"enabled\": True,\n1470 \u2192 |                         \"message\": f\"Sketchfab integration is enabled and ready to use. Logged in as: {username}\"\n1471   |                     }\n1472   |                 else:\n1473   |                     return {\n1474   |                         \"enabled\": False,",
+      "description": "User input is concatenated directly into a string that may be used as an AI prompt. F-string with user input. This allows attackers to inject malicious instructions that can manipulate AI behavior, bypass security controls, or extract sensitive information.",
+      "confidence": 0.95,
+      "cwe_id": "CWE-74",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "pattern": "f[\"\\'].*?\\{user[_\\w]*\\}",
+        "matched_text": "f\"Sketchfab integration is enabled and ready to use. Logged in as: {username}",
+        "has_ai_context": true,
+        "risk_explanation": "An attacker could inject malicious instructions into the 'username' input, manipulating the AI's behavior to bypass security controls or extract sensitive information. This could lead to unauthorized access, data breaches, and loss of customer trust.",
+        "suggested_fix": "Vulnerable Code:\npython\nreturn {\n  \"enabled\": True,\n  \"message\": f\"Sketchfab integration is enabled and ready to use. Logged in as: {username}\"\n}\n\nSafe Code:\npython\nreturn {\n  \"enabled\": True,\n  \"message\": [\n    {\"role\": \"system\", \"content\": \"Sketchfab integration is enabled and ready to use. Logged in as: \"},\n    {\"role\": \"user\", \"content\": username}\n  ]\n}\n\nIn the safe code, we're using a structured message array instead of direct string concatenation. This ensures that user input is treated as data, not executable instructions, preventing prompt injection attacks."
+      },
+      "risk_explanation": "An attacker could inject malicious instructions into the 'username' input, manipulating the AI's behavior to bypass security controls or extract sensitive information. This could lead to unauthorized access, data breaches, and loss of customer trust.",
+      "suggested_fix": "Vulnerable Code:\npython\nreturn {\n  \"enabled\": True,\n  \"message\": f\"Sketchfab integration is enabled and ready to use. Logged in as: {username}\"\n}\n\nSafe Code:\npython\nreturn {\n  \"enabled\": True,\n  \"message\": [\n    {\"role\": \"system\", \"content\": \"Sketchfab integration is enabled and ready to use. Logged in as: \"},\n    {\"role\": \"user\", \"content\": username}\n  ]\n}\n\nIn the safe code, we're using a structured message array instead of direct string concatenation. This ensures that user input is treated as data, not executable instructions, preventing prompt injection attacks."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Hardcoded Secret",
+      "severity": "MEDIUM",
+      "line_number": 1725,
+      "code_snippet": "1723   | # Operator to set Hyper3D API Key\n1724   | class BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):\n1725 \u2192 |     bl_idname = \"blendermcp.set_hyper3d_free_trial_api_key\"\n1726   |     bl_label = \"Set Free Trial API Key\"\n1727   | \n1728   |     def execute(self, context):",
+      "description": "Potential secret detected: variable name contains 'api_key' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.",
+      "confidence": 0.6,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "fuzzy",
+        "keyword": "api_key",
+        "risk_explanation": "An attacker could discover the hardcoded API key in the source code, gain unauthorized access to the Hyper3D service, and potentially manipulate or steal sensitive data. This could lead to service disruption, data breaches, and loss of customer trust.",
+        "suggested_fix": "Vulnerable pattern:\npython\nclass BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):\n  bl_idname = \"blendermcp.set_hyper3d_free_trial_api_key\"\n  bl_label = \"Set Free Trial API Key\"\n\n  def execute(self, context):\n    api_key = \"hardcoded_secret_key\"\n\n\nSafe alternative:\npython\nimport os\n\nclass BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):\n  bl_idname = \"blendermcp.set_hyper3d_free_trial_api_key\"\n  bl_label = \"Set Free Trial API Key\"\n\n  def execute(self, context):\n    api_key = os.environ.get('HYPER3D_API_KEY')\n\nIn the safe alternative, the API key is r."
+      },
+      "risk_explanation": "An attacker could discover the hardcoded API key in the source code, gain unauthorized access to the Hyper3D service, and potentially manipulate or steal sensitive data. This could lead to service disruption, data breaches, and loss of customer trust.",
+      "suggested_fix": "Vulnerable pattern:\npython\nclass BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):\n  bl_idname = \"blendermcp.set_hyper3d_free_trial_api_key\"\n  bl_label = \"Set Free Trial API Key\"\n\n  def execute(self, context):\n    api_key = \"hardcoded_secret_key\"\n\n\nSafe alternative:\npython\nimport os\n\nclass BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):\n  bl_idname = \"blendermcp.set_hyper3d_free_trial_api_key\"\n  bl_label = \"Set Free Trial API Key\"\n\n  def execute(self, context):\n    api_key = os.environ.get('HYPER3D_API_KEY')\n\nIn the safe alternative, the API key is r."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 415,
+      "code_snippet": "412   |             # Capture stdout during execution, and return it as result\n413   |             capture_buffer = io.StringIO()\n414   |             with redirect_stdout(capture_buffer):\n415 \u2192 |                 exec(code, namespace)\n416   | \n417   |             captured_output = capture_buffer.getvalue()\n418   |             return {\"executed\": True, \"result\": captured_output}\n419   |         except Exception as e:",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Arbitrary code execution ('exec('). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "exec(",
+        "operation_type": "Arbitrary code execution",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could inject malicious code into the 'code' variable, leading to arbitrary code execution. This could result in unauthorized access to sensitive data, server takeover, or denial of service. The business impact could include data breaches, service disruptions, and loss of customer trust.",
+        "suggested_fix": "Replace the 'exec' function with a safer alternative that doesn't allow arbitrary code execution. For instance, you could use the 'ast' module to evaluate expressions safely. Here's how you can do it:\n\nVULNERABLE CODE:\npython\nexec(code, namespace)\n\n\nSAFE CODE:\npython\nimport ast\n\n# Parse the code into an Abstract Syntax Tree (AST)\nnode = ast.parse(code, mode='eval')\n\n# Evaluate the AST node safely\nresult = ast.literal_eval(node)\n\n\nNote: This only works for evaluating expressions, not executing statements. If you need to execute statements, consider using a sandboxed environment or a restricted."
+      },
+      "risk_explanation": "An attacker could inject malicious code into the 'code' variable, leading to arbitrary code execution. This could result in unauthorized access to sensitive data, server takeover, or denial of service. The business impact could include data breaches, service disruptions, and loss of customer trust.",
+      "suggested_fix": "Replace the 'exec' function with a safer alternative that doesn't allow arbitrary code execution. For instance, you could use the 'ast' module to evaluate expressions safely. Here's how you can do it:\n\nVULNERABLE CODE:\npython\nexec(code, namespace)\n\n\nSAFE CODE:\npython\nimport ast\n\n# Parse the code into an Abstract Syntax Tree (AST)\nnode = ast.parse(code, mode='eval')\n\n# Evaluate the AST node safely\nresult = ast.literal_eval(node)\n\n\nNote: This only works for evaluating expressions, not executing statements. If you need to execute statements, consider using a sandboxed environment or a restricted."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 616,
+      "code_snippet": "613   | \n614   |                                         # Clean up temporary file\n615   |                                         try:\n616 \u2192 |                                             os.unlink(tmp_path)\n617   |                                         except:\n618   |                                             pass\n619   | \n620   |                     if not downloaded_maps:",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: File unlinking/deletion ('os.unlink'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "os.unlink",
+        "operation_type": "File unlinking/deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+        "suggested_fix": "Vulnerable Code:\npython\nos.unlink(tmp_path)\n\n\nSafe Code:\npython\nimport shutil\n\ndef safe_delete_file(file_path):\n  # Check if the file path is within a safe, whitelisted directory\n  if is_safe_directory(file_path):\n    try:\n      shutil.rmtree(file_path, ignore_errors=True, onerror=None)\n    except Exception as e:\n      print(f\"Error occurred while deleting the file: {e}\")\n  else:\n    print(\"File path is not within a safe directory. Deletion not permitted.\")\n\nIn this fix, we're using a safe_delete_file function that first checks if the file path is within a safe, w."
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+      "suggested_fix": "Vulnerable Code:\npython\nos.unlink(tmp_path)\n\n\nSafe Code:\npython\nimport shutil\n\ndef safe_delete_file(file_path):\n  # Check if the file path is within a safe, whitelisted directory\n  if is_safe_directory(file_path):\n    try:\n      shutil.rmtree(file_path, ignore_errors=True, onerror=None)\n    except Exception as e:\n      print(f\"Error occurred while deleting the file: {e}\")\n  else:\n    print(\"File path is not within a safe directory. Deletion not permitted.\")\n\nIn this fix, we're using a safe_delete_file function that first checks if the file path is within a safe, w."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 782,
+      "code_snippet": "779   |                     finally:\n780   |                         # Clean up temporary directory\n781   |                         with suppress(Exception):\n782 \u2192 |                             shutil.rmtree(temp_dir)\n783   |                 else:\n784   |                     return {\"error\": f\"Requested format or resolution not available for this model\"}\n785   | \n786   |             else:",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Recursive directory deletion ('shutil.rmtree'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "shutil.rmtree",
+        "operation_type": "Recursive directory deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical files or directories, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+        "suggested_fix": "To mitigate this risk, you should restrict the AI's ability to perform dangerous operations like recursive directory deletion. Instead of directly using `shutil.rmtree(temp_dir)`, you can implement a safe, read-only operation that flags the directory for manual review or deletion.\n\nVulnerable code:\npython\nshutil.rmtree(temp_dir)\n\n\nSafe alternative:\npython\nimport os\n\n# Flag the directory for manual review or deletion\nwith open(os.path.join(temp_dir, 'delete_me'), 'w') as f:\n  f.write('This directory has been flagged for deletion.')\n\n\nThis approach ensures that the AI follows the principle of."
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical files or directories, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+      "suggested_fix": "To mitigate this risk, you should restrict the AI's ability to perform dangerous operations like recursive directory deletion. Instead of directly using `shutil.rmtree(temp_dir)`, you can implement a safe, read-only operation that flags the directory for manual review or deletion.\n\nVulnerable code:\npython\nshutil.rmtree(temp_dir)\n\n\nSafe alternative:\npython\nimport os\n\n# Flag the directory for manual review or deletion\nwith open(os.path.join(temp_dir, 'delete_me'), 'w') as f:\n  f.write('This directory has been flagged for deletion.')\n\n\nThis approach ensures that the AI follows the principle of."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1357,
+      "code_snippet": "1354   |                 except Exception as e:\n1355   |                     # Clean up the file if there's an error\n1356   |                     temp_file.close()\n1357 \u2192 |                     os.unlink(temp_file.name)\n1358   |                     return {\"succeed\": False, \"error\": str(e)}\n1359   | \n1360   |                 break\n1361   |         else:",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: File unlinking/deletion ('os.unlink'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "os.unlink",
+        "operation_type": "File unlinking/deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+        "suggested_fix": "Remove the file deletion operation 'os.unlink' and replace it with a safer alternative. If file deletion is necessary, consider using a secure file management library that provides access control and logging, or require human approval for such operations.\n\nVULNERABLE CODE:\n1357  |   os.unlink(temp_file.name)\n\nSAFE CODE:\n1357  |   # os.unlink(temp_file.name)\n1358  |   request_human_approval_for_deletion(temp_file.name)"
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+      "suggested_fix": "Remove the file deletion operation 'os.unlink' and replace it with a safer alternative. If file deletion is necessary, consider using a secure file management library that provides access control and logging, or require human approval for such operations.\n\nVULNERABLE CODE:\n1357  |   os.unlink(temp_file.name)\n\nSAFE CODE:\n1357  |   # os.unlink(temp_file.name)\n1358  |   request_human_approval_for_deletion(temp_file.name)"
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1419,
+      "code_snippet": "1416   |         except Exception as e:\n1417   |             # Clean up the file if there's an error\n1418   |             temp_file.close()\n1419 \u2192 |             os.unlink(temp_file.name)\n1420   |             return {\"succeed\": False, \"error\": str(e)}\n1421   | \n1422   |         try:\n1423   |             obj = self._clean_imported_glb(",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: File unlinking/deletion ('os.unlink'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "os.unlink",
+        "operation_type": "File unlinking/deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+        "suggested_fix": "Vulnerable Code:\npython\nos.unlink(temp_file.name)\n\nSafe Code:\npython\nimport shutil\n\n# Replace file deletion with a safer operation, such as moving the file to a quarantine directory\nquarantine_dir = \"/path/to/quarantine\"\nshutil.move(temp_file.name, quarantine_dir)\n\nAlternatively, if file deletion is absolutely necessary, consider adding additional checks to prevent arbitrary file deletion:\npython\nimport os\n\n# Define a list of allowed directories for file deletion\nallowed_directories = [\"/path/to/allowed/dir1\", \"/path/to/allowed/dir2\"]\n\n# Check if the file to be deleted is in an allowed directo."
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete arbitrary files, leading to data loss or service disruption. This could result in loss of customer trust, regulatory fines, and operational downtime.",
+      "suggested_fix": "Vulnerable Code:\npython\nos.unlink(temp_file.name)\n\nSafe Code:\npython\nimport shutil\n\n# Replace file deletion with a safer operation, such as moving the file to a quarantine directory\nquarantine_dir = \"/path/to/quarantine\"\nshutil.move(temp_file.name, quarantine_dir)\n\nAlternatively, if file deletion is absolutely necessary, consider adding additional checks to prevent arbitrary file deletion:\npython\nimport os\n\n# Define a list of allowed directories for file deletion\nallowed_directories = [\"/path/to/allowed/dir1\", \"/path/to/allowed/dir2\"]\n\n# Check if the file to be deleted is in an allowed directo."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1644,
+      "code_snippet": "1641   |                     # Ensure the normalized path doesn't escape the target directory\n1642   |                     if not abs_target_path.startswith(abs_temp_dir):\n1643   |                         with suppress(Exception):\n1644 \u2192 |                             shutil.rmtree(temp_dir)\n1645   |                         return {\"error\": \"Security issue: Zip contains files with path traversal attempt\"}\n1646   | \n1647   |                     # Additional explicit check for directory traversal\n1648   |                     if \"..\" in file_path:",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Recursive directory deletion ('shutil.rmtree'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "shutil.rmtree",
+        "operation_type": "Recursive directory deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI tool to delete important directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+        "suggested_fix": "Remove the dangerous 'shutil.rmtree' operation and replace it with a safer alternative. If deleting directories is necessary, consider using a more controlled approach such as deleting files one by one with os.remove after careful validation. Also, ensure that the AI tool operates in a restricted environment where it only has access to necessary resources.\n\nVulnerable Code:\npython\nwith suppress(Exception):\n  shutil.rmtree(temp_dir)\n\n\nSafe Code:\npython\nimport os\n\nfor root, dirs, files in os.walk(temp_dir, topdown=False):\n  for name in files:\n    os.remove(os.path.join(root, name))\n  f."
+      },
+      "risk_explanation": "An attacker could manipulate the AI tool to delete important directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+      "suggested_fix": "Remove the dangerous 'shutil.rmtree' operation and replace it with a safer alternative. If deleting directories is necessary, consider using a more controlled approach such as deleting files one by one with os.remove after careful validation. Also, ensure that the AI tool operates in a restricted environment where it only has access to necessary resources.\n\nVulnerable Code:\npython\nwith suppress(Exception):\n  shutil.rmtree(temp_dir)\n\n\nSafe Code:\npython\nimport os\n\nfor root, dirs, files in os.walk(temp_dir, topdown=False):\n  for name in files:\n    os.remove(os.path.join(root, name))\n  f."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1650,
+      "code_snippet": "1647   |                     # Additional explicit check for directory traversal\n1648   |                     if \"..\" in file_path:\n1649   |                         with suppress(Exception):\n1650 \u2192 |                             shutil.rmtree(temp_dir)\n1651   |                         return {\"error\": \"Security issue: Zip contains files with directory traversal sequence\"}\n1652   | \n1653   |                 # If all files passed security checks, extract them\n1654   |                 zip_ref.extractall(temp_dir)",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Recursive directory deletion ('shutil.rmtree'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "shutil.rmtree",
+        "operation_type": "Recursive directory deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI tool through prompt injection to delete important directories or files, leading to data loss or service disruption. This could result in significant operational downtime and potential loss of sensitive information.",
+        "suggested_fix": "Remove the dangerous operation 'shutil.rmtree' and replace it with a safer alternative. If deletion of files is necessary, consider using 'os.remove' for individual files and ensure proper validation of file paths. Also, consider implementing a human approval process for critical operations.\n\nVulnerable Code:\npython\nif \".\" in file_path:\n  with suppress(Exception):\n    shutil.rmtree(temp_dir)\n\n\nSafe Code:\npython\nif \".\" in file_path:\n  with suppress(Exception):\n    # Send a request for human approval or log the event for review\n    log_event(\"Potential security issue: Zip conta."
+      },
+      "risk_explanation": "An attacker could manipulate the AI tool through prompt injection to delete important directories or files, leading to data loss or service disruption. This could result in significant operational downtime and potential loss of sensitive information.",
+      "suggested_fix": "Remove the dangerous operation 'shutil.rmtree' and replace it with a safer alternative. If deletion of files is necessary, consider using 'os.remove' for individual files and ensure proper validation of file paths. Also, consider implementing a human approval process for critical operations.\n\nVulnerable Code:\npython\nif \".\" in file_path:\n  with suppress(Exception):\n    shutil.rmtree(temp_dir)\n\n\nSafe Code:\npython\nif \".\" in file_path:\n  with suppress(Exception):\n    # Send a request for human approval or log the event for review\n    log_event(\"Potential security issue: Zip conta."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1661,
+      "code_snippet": "1658   | \n1659   |             if not gltf_files:\n1660   |                 with suppress(Exception):\n1661 \u2192 |                     shutil.rmtree(temp_dir)\n1662   |                 return {\"error\": \"No glTF file found in the downloaded model\"}\n1663   | \n1664   |             main_file = os.path.join(temp_dir, gltf_files[0])\n1665   | ",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Recursive directory deletion ('shutil.rmtree'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "shutil.rmtree",
+        "operation_type": "Recursive directory deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+        "suggested_fix": "Instead of allowing the AI to perform dangerous operations like recursive directory deletion, implement a safe, read-only operation or require human approval for such actions. Here's a safe alternative:\n\nVULNERABLE CODE:\n1661  |   shutil.rmtree(temp_dir)\n\nSAFE CODE:\n1661  |   # Send a request for human approval to delete the directory\n1662  |   request_human_approval(f\"Delete directory: {temp_dir}\")\n1663  |   # Once approved, delete the directory\n1664  |   # shutil.rmtree(temp_dir)"
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+      "suggested_fix": "Instead of allowing the AI to perform dangerous operations like recursive directory deletion, implement a safe, read-only operation or require human approval for such actions. Here's a safe alternative:\n\nVULNERABLE CODE:\n1661  |   shutil.rmtree(temp_dir)\n\nSAFE CODE:\n1661  |   # Send a request for human approval to delete the directory\n1662  |   request_human_approval(f\"Delete directory: {temp_dir}\")\n1663  |   # Once approved, delete the directory\n1664  |   # shutil.rmtree(temp_dir)"
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 1674,
+      "code_snippet": "1671   | \n1672   |             # Clean up temporary files\n1673   |             with suppress(Exception):\n1674 \u2192 |                 shutil.rmtree(temp_dir)\n1675   | \n1676   |             return {\n1677   |                 \"success\": True,\n1678   |                 \"message\": \"Model imported successfully\",",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Recursive directory deletion ('shutil.rmtree'). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "shutil.rmtree",
+        "operation_type": "Recursive directory deletion",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+        "suggested_fix": "To mitigate this risk, you should restrict the AI's ability to perform dangerous operations like recursive directory deletion. Instead of directly calling `shutil.rmtree(temp_dir)`, you can implement a safe, read-only operation that flags the directory for manual review or deletion.\n\nVulnerable code:\npython\nshutil.rmtree(temp_dir)\n\n\nSafe alternative:\npython\nimport os\n\n# Flag the directory for manual review or deletion\nwith open(os.path.join(temp_dir, 'delete_me'), 'w') as f:\n  f.write('This directory has been flagged for deletion.')\n\n\nThis approach follows the principle of least privilege, e."
+      },
+      "risk_explanation": "An attacker could manipulate the AI through prompt injection to delete critical directories or files, leading to data loss or service disruption. This could result in significant operational downtime and financial loss.",
+      "suggested_fix": "To mitigate this risk, you should restrict the AI's ability to perform dangerous operations like recursive directory deletion. Instead of directly calling `shutil.rmtree(temp_dir)`, you can implement a safe, read-only operation that flags the directory for manual review or deletion.\n\nVulnerable code:\npython\nshutil.rmtree(temp_dir)\n\n\nSafe alternative:\npython\nimport os\n\n# Flag the directory for manual review or deletion\nwith open(os.path.join(temp_dir, 'delete_me'), 'w') as f:\n  f.write('This directory has been flagged for deletion.')\n\n\nThis approach follows the principle of least privilege, e."
+    }
+  ]
+}
