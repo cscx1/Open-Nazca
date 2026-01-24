@@ -11,7 +11,12 @@ st.set_page_config(
     page_title="LLMCheck - AI Code Security Scanner",
     page_icon="🔒",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
 )
 
 # Custom CSS
@@ -45,42 +50,46 @@ st.markdown("""
     }
     
     .feature-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
         padding: 1.5rem;
         border-radius: 10px;
         margin: 1rem 0;
         border-left: 5px solid #667eea;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         transition: transform 0.2s;
     }
     
     .feature-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
     }
     
     .feature-card h3 {
-        color: #667eea;
+        color: #a5b4fc;
         margin-bottom: 0.5rem;
     }
     
+    .feature-card p {
+        color: #e0e0e0;
+    }
+    
     .stats-box {
-        background: white;
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
         padding: 1.5rem;
         border-radius: 10px;
         text-align: center;
         border: 2px solid #667eea;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
     }
     
     .stats-box h2 {
-        color: #667eea;
+        color: #a5b4fc;
         font-size: 2.5rem;
         margin-bottom: 0.5rem;
     }
     
     .stats-box p {
-        color: #666;
+        color: #d0d0d0;
         font-size: 1rem;
     }
     

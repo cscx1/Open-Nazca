@@ -27,17 +27,21 @@ st.markdown("""
     }
     
     .info-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
         padding: 1.5rem;
         border-radius: 10px;
         margin: 1rem 0;
         border-left: 5px solid #667eea;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     
     .info-card h3 {
-        color: #667eea;
+        color: #a5b4fc;
         margin-bottom: 0.5rem;
+    }
+    
+    .info-card p, .info-card ul, .info-card li {
+        color: #e0e0e0;
     }
     
     .tech-badge {
@@ -51,19 +55,93 @@ st.markdown("""
     }
     
     .vulnerability-box {
-        background: white;
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
         padding: 1.5rem;
         border-radius: 10px;
         border: 2px solid #667eea;
         margin: 1rem 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    }
+    
+    .vulnerability-box h3 {
+        color: #a5b4fc !important;
+    }
+    
+    .vulnerability-box p {
+        color: #e0e0e0;
+    }
+    
+    .vulnerability-box strong {
+        color: #a5b4fc;
+        font-weight: 600;
+    }
+    
+    /* Target Streamlit's generated markdown elements */
+    div[data-testid="stMarkdown"] h3 {
+        color: #a5b4fc !important;
+    }
+    
+    div[data-testid="stMarkdown"] p {
+        color: #e0e0e0 !important;
+    }
+    
+    div[data-testid="stMarkdown"] strong {
+        color: #a5b4fc !important;
     }
     
     .feature-list {
-        background: #f8f9fa;
+        background: rgba(30, 30, 46, 0.5);
         padding: 1rem;
         border-radius: 8px;
         margin: 0.5rem 0;
+        color: #e0e0e0;
+    }
+    
+    .feature-list strong {
+        color: #a5b4fc;
+        font-weight: 600;
+    }
+    
+    .info-card strong {
+        color: #a5b4fc;
+        font-weight: 600;
+    }
+    
+    .team-card {
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border: 2px solid #667eea;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+        text-align: center;
+    }
+    
+    .team-card h4 {
+        color: #a5b4fc;
+        margin-bottom: 0.5rem;
+        font-size: 1.3rem;
+    }
+    
+    .team-card p {
+        color: #e0e0e0;
+        margin: 0.5rem 0;
+    }
+    
+    .social-links {
+        margin-top: 1rem;
+    }
+    
+    .social-links a {
+        color: #667eea;
+        text-decoration: none;
+        margin: 0 0.5rem;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    
+    .social-links a:hover {
+        color: #a5b4fc;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -100,16 +178,10 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("""
     <div class="vulnerability-box">
-        <h3 style="color: #667eea;">🎭 Prompt Injection</h3>
-        <p><strong>What it is:</strong> Attackers manipulate AI behavior by injecting malicious 
-        instructions into prompts through unsafe string concatenation.</p>
-        
-        <p><strong>Why it matters:</strong> Can lead to data exfiltration, unauthorized actions, 
-        or complete AI system compromise.</p>
-        
-        <p><strong>How we detect it:</strong> Pattern matching and AST analysis to identify unsafe 
-        user input concatenation in AI prompts.</p>
-        
+        <h3>🎭 Prompt Injection</h3>
+        <p><strong>What it is:</strong> Attackers manipulate AI behavior by injecting malicious instructions into prompts through unsafe string concatenation.</p>
+        <p><strong>Why it matters:</strong> Can lead to data exfiltration, unauthorized actions, or complete AI system compromise.</p>
+        <p><strong>How we detect it:</strong> Pattern matching and AST analysis to identify unsafe user input concatenation in AI prompts.</p>
         <p><strong>CWE:</strong> CWE-74 (Improper Neutralization)</p>
         <p><strong>OWASP:</strong> LLM01:2023</p>
     </div>
@@ -118,16 +190,10 @@ with col1:
 with col2:
     st.markdown("""
     <div class="vulnerability-box">
-        <h3 style="color: #667eea;">🔑 Hardcoded Secrets</h3>
-        <p><strong>What it is:</strong> API keys, passwords, tokens, and credentials stored 
-        directly in source code instead of secure vaults.</p>
-        
-        <p><strong>Why it matters:</strong> Exposed secrets can lead to unauthorized access, 
-        data breaches, and significant financial damage.</p>
-        
-        <p><strong>How we detect it:</strong> Advanced regex patterns for OpenAI, AWS, GitHub, 
-        Anthropic, and 20+ other providers.</p>
-        
+        <h3>🔑 Hardcoded Secrets</h3>
+        <p><strong>What it is:</strong> API keys, passwords, tokens, and credentials stored directly in source code instead of secure vaults.</p>
+        <p><strong>Why it matters:</strong> Exposed secrets can lead to unauthorized access, data breaches, and significant financial damage.</p>
+        <p><strong>How we detect it:</strong> Advanced regex patterns for OpenAI, AWS, GitHub, Anthropic, and 20+ other providers.</p>
         <p><strong>CWE:</strong> CWE-798 (Hard-coded Credentials)</p>
         <p><strong>OWASP:</strong> A02:2021</p>
     </div>
@@ -136,16 +202,10 @@ with col2:
 with col3:
     st.markdown("""
     <div class="vulnerability-box">
-        <h3 style="color: #667eea;">⚠️ Over-Privileged Tools</h3>
-        <p><strong>What it is:</strong> AI agents granted excessive permissions like delete, 
-        exec, eval, or drop operations.</p>
-        
-        <p><strong>Why it matters:</strong> Violates the principle of least privilege and can 
-        result in catastrophic system damage.</p>
-        
-        <p><strong>How we detect it:</strong> Contextual analysis of AI tool definitions to 
-        identify dangerous operation grants.</p>
-        
+        <h3>⚠️ Over-Privileged Tools</h3>
+        <p><strong>What it is:</strong> AI agents granted excessive permissions like delete, exec, eval, or drop operations.</p>
+        <p><strong>Why it matters:</strong> Violates the principle of least privilege and can result in catastrophic system damage.</p>
+        <p><strong>How we detect it:</strong> Contextual analysis of AI tool definitions to identify dangerous operation grants.</p>
         <p><strong>CWE:</strong> CWE-269 (Improper Privilege Management)</p>
         <p><strong>OWASP:</strong> LLM08:2023</p>
     </div>
@@ -166,19 +226,10 @@ with col1:
     st.markdown("""
     <div class="info-card">
         <h3>🔧 Core Components</h3>
-        <div class="feature-list">
-            <strong>Code Ingestion Module:</strong> Safely reads and parses code files with 
-            multi-language support and encoding fallback.<br><br>
-            
-            <strong>Detection Engine:</strong> Pattern-based and AST analysis for accurate 
-            vulnerability detection with minimal false positives.<br><br>
-            
-            <strong>LLM Analyzer:</strong> Snowflake Cortex (Mistral-Large) generates plain-language 
-            explanations and actionable fix suggestions.<br><br>
-            
-            <strong>Report Generator:</strong> Creates JSON, HTML, and Markdown reports with 
-            syntax highlighting and severity color-coding.
-        </div>
+        <p><strong>Code Ingestion Module:</strong> Safely reads and parses code files with multi-language support and encoding fallback.</p>
+        <p><strong>Detection Engine:</strong> Pattern-based and AST analysis for accurate vulnerability detection with minimal false positives.</p>
+        <p><strong>LLM Analyzer:</strong> Snowflake Cortex (Mistral-Large) generates plain-language explanations and actionable fix suggestions.</p>
+        <p><strong>Report Generator:</strong> Creates JSON, HTML, and Markdown reports with syntax highlighting and severity color-coding.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -186,19 +237,10 @@ with col2:
     st.markdown("""
     <div class="info-card">
         <h3>❄️ Snowflake Integration</h3>
-        <div class="feature-list">
-            <strong>Data Storage:</strong> All scan results and findings persisted in Snowflake 
-            for long-term tracking and analytics.<br><br>
-            
-            <strong>Cortex LLM:</strong> Uses Snowflake Cortex for AI-powered analysis, eliminating 
-            the need for separate OpenAI/Anthropic accounts.<br><br>
-            
-            <strong>Analytics Ready:</strong> Pre-built SQL views for vulnerability trends, 
-            remediation tracking, and compliance reporting.<br><br>
-            
-            <strong>Single Platform:</strong> One credential, one system for complete security 
-            workflow management.
-        </div>
+        <p><strong>Data Storage:</strong> All scan results and findings persisted in Snowflake for long-term tracking and analytics.</p>
+        <p><strong>Cortex LLM:</strong> Uses Snowflake Cortex for AI-powered analysis, eliminating the need for separate OpenAI/Anthropic accounts.</p>
+        <p><strong>Analytics Ready:</strong> Pre-built SQL views for vulnerability trends, remediation tracking, and compliance reporting.</p>
+        <p><strong>Single Platform:</strong> One credential, one system for complete security workflow management.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -435,18 +477,67 @@ with roadmap_col2:
 st.markdown("---")
 
 # Team & Credits
-st.markdown("## 👥 Team & Credits")
+st.markdown("## 👥 Meet the Team")
 
 st.markdown("""
 ### Built with ❤️ for HoyaHacks 2026
 
-**LLMCheck** was developed as a hackathon project to demonstrate the power of combining security 
-research, AI technology, and cloud data platforms for defensive security.
+**LLMCheck** was developed by a passionate team dedicated to making AI systems more secure.
+""")
 
-**Special Thanks:**
-- Snowflake for providing the Data Cloud platform and Cortex LLM capabilities
-- The open-source security community for vulnerability research and best practices
-- OWASP for comprehensive security guidelines and frameworks
+# Team members in a 2x2 grid
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("""
+    <div class="team-card">
+        <h4>Diego Zane</h4>
+        <div class="social-links">
+            <a href="https://github.com/cscx1" target="_blank">🔗 GitHub</a>
+            <a href="https://www.linkedin.com/in/diegozane/" target="_blank">💼 LinkedIn</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="team-card">
+        <h4>Michael Brown</h4>
+        <div class="social-links">
+            <a href="https://github.com/Mikebrown4768" target="_blank">🔗 GitHub</a>
+            <a href="https://www.linkedin.com/in/michael-brown-jr-914069190/" target="_blank">💼 LinkedIn</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown("""
+    <div class="team-card">
+        <h4>Shaun Hoffmann</h4>
+        <div class="social-links">
+            <a href="https://github.com/ShaunHoffmann" target="_blank">🔗 GitHub</a>
+            <a href="https://www.linkedin.com/in/shaunhoffmann/" target="_blank">💼 LinkedIn</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="team-card">
+        <h4>Jungho An</h4>
+        <div class="social-links">
+            <a href="https://github.com/JungAn2" target="_blank">🔗 GitHub</a>
+            <a href="https://www.linkedin.com/in/jungho-an-8958001b9/" target="_blank">💼 LinkedIn</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
+
+st.markdown("""
+### 🙏 Special Thanks
+
+- **Snowflake** for providing the Data Cloud platform and Cortex LLM capabilities
+- The **open-source security community** for vulnerability research and best practices
+- **OWASP** for comprehensive security guidelines and frameworks
 """)
 
 st.markdown("---")
