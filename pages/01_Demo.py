@@ -198,14 +198,23 @@ def main():
                         scanner = None
                         tmp_path = None
                         try:
-                            # Save uploaded file to temp location
-                            with tempfile.NamedTemporaryFile(
-                                delete=False,
-                                suffix=Path(uploaded_file.name).suffix,
-                                mode='wb'
-                            ) as tmp_file:
-                                tmp_file.write(uploaded_file.read())
-                                tmp_path = tmp_file.name
+                            # Save uploaded file with timestamped name
+                            from datetime import datetime
+                            
+                            # Create temp directory for scans
+                            temp_dir = Path('temp_scans')
+                            temp_dir.mkdir(exist_ok=True)
+                            
+                            # Generate filename with timestamp: filename_YYYYMMDD_HHMMSS
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            base_name = Path(uploaded_file.name).stem
+                            extension = Path(uploaded_file.name).suffix
+                            timestamped_filename = f"{base_name}_{timestamp}{extension}"
+                            tmp_path = str(temp_dir / timestamped_filename)
+                            
+                            # Write file
+                            with open(tmp_path, 'wb') as f:
+                                f.write(uploaded_file.read())
 
                             # Initialize scanner
                             scanner = AICodeScanner(

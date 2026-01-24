@@ -35,7 +35,7 @@ AI Code Breaker scans your codebase for three critical security vulnerabilities:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/LLMCheck.git
+git clone https://github.com/cscx1/LLMCheck.git
 cd LLMCheck
 
 # Install dependencies
