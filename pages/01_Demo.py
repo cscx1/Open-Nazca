@@ -224,7 +224,11 @@ def main():
                             )
                             
                             # Clean up temp file
-                            os.unlink(tmp_path)
+                            try:
+                                os.unlink(tmp_path)
+                            except OSError as cleanup_err:
+                                # Log a non-fatal warning if temp file deletion fails
+                                st.warning(f"⚠️ Could not delete temporary file: {cleanup_err}")
                             
                             # Store results in session state
                             st.session_state.scan_results = results
