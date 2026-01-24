@@ -13,7 +13,6 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.scanner import AICodeScanner
-from src.ingestion import CodeIngestion
 
 # Page configuration
 st.set_page_config(
