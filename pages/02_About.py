@@ -4,7 +4,6 @@ About Page: Project Details, Team, and Resources
 """
 
 import streamlit as st
-from pathlib import Path
 
 # Page configuration
 st.set_page_config(
