@@ -1,0 +1,104 @@
+# AI Code Breaker Configuration File
+
+# Supported file types and languages
+supported_languages:
+  - python
+  - javascript
+  - typescript
+  - java
+  - go
+
+# File size limits
+max_file_size_mb: 10
+max_batch_files: 50
+
+# Detector Configuration
+detectors:
+  prompt_injection:
+    enabled: true
+    severity: CRITICAL
+    patterns:
+      - "f\"{user"
+      - "format(user"
+      - "+ user_input"
+      - "input() +"
+  
+  hardcoded_secrets:
+    enabled: true
+    severity: CRITICAL
+    patterns:
+      - "api_key"
+      - "secret_key"
+      - "password"
+      - "token"
+      - "AWS_ACCESS_KEY"
+      - "OPENAI_API_KEY"
+  
+  overprivileged_tools:
+    enabled: true
+    severity: HIGH
+    dangerous_operations:
+      - "delete"
+      - "drop"
+      - "remove"
+      - "execute"
+      - "eval"
+      - "exec"
+  
+  insecure_deserialization:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - "pickle.loads"
+      - "yaml.load"
+      - "eval("
+      - "exec("
+
+# Severity Levels
+severity_levels:
+  CRITICAL:
+    score: 10
+    color: red
+  HIGH:
+    score: 7
+    color: orange
+  MEDIUM:
+    score: 4
+    color: yellow
+  LOW:
+    score: 2
+    color: blue
+
+# LLM Configuration
+llm:
+  provider: snowflake_cortex  # Options: snowflake_cortex (default), openai, anthropic
+  model: mistral-large  # or gpt-4, claude-3-sonnet
+  temperature: 0.3
+  max_tokens: 1000
+  system_prompt: |
+    You are a cybersecurity expert specializing in AI system security.
+    Your role is to explain security vulnerabilities in plain language
+    and suggest safe, practical fixes. Never generate exploit code.
+    Focus on defensive security measures only.
+
+# Reporting Configuration
+reporting:
+  formats:
+    - json
+    - html
+    - markdown
+  include_code_snippets: true
+  max_snippet_lines: 10
+
+# Snowflake Configuration (loaded from environment variables)
+snowflake:
+  enabled: true
+  batch_insert_size: 100
+  connection_timeout: 60
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: logs/llmcheck.log
+

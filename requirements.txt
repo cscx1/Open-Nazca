@@ -1,0 +1,28 @@
+# Core Dependencies
+snowflake-connector-python>=3.7.0
+snowflake-snowpark-python>=1.35.0
+
+# Code Analysis (Optional)
+bandit>=1.7.5
+gitpython>=3.1.40
+
+# LLM Integration (Optional - only if not using Snowflake Cortex)
+openai>=1.12.0
+anthropic>=0.18.1
+requests>=2.31.0
+
+# UI and Reporting
+streamlit>=1.31.0
+pandas>=2.2.0
+plotly>=5.18.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+colorama>=0.4.6
+rich>=13.7.0
+
+# Testing (optional for hackathon)
+pytest>=8.0.0
+pytest-mock>=3.12.0
+
