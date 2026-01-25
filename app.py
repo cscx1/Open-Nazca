@@ -231,23 +231,55 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
     }
 
+    /* Responsive Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    
+    /* Ensure content inside doesn't overflow */
+    .metric-value {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Responsive Charts: Force wrapping on smaller screens */
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPlotlyChart"]) {
+        flex-wrap: wrap !important;
+        gap: 20px !important;
+    }
+    
+    div[data-testid="column"]:has(div[data-testid="stPlotlyChart"]) {
+        min-width: 350px !important;
+        flex: 1 1 350px !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
 
 # --- Helper Functions ---
 
-def render_metric_card(title, value, subtext, icon="📌", color="#3B82F6"):
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-card-header">
-            <span class="metric-icon" style="color: {color};">{icon}</span>
-            <span class="metric-title">{title}</span>
-        </div>
-        <div class="metric-value">{value}</div>
-        <div class="metric-subtext">{subtext}</div>
+def get_metric_card_html(title, value, subtext, icon="📌", color="#3B82F6"):
+    return f"""<div class="metric-card">
+    <div class="metric-card-header">
+        <span class="metric-icon" style="color: {color};">{icon}</span>
+        <span class="metric-title">{title}</span>
     </div>
-    """, unsafe_allow_html=True)
+    <div class="metric-value">{value}</div>
+    <div class="metric-subtext">{subtext}</div>
+</div>"""
+
+def render_metrics_grid(cards):
+    """Render a responsive grid of metric cards."""
+    html = '<div class="metrics-grid">'
+    for card in cards:
+        html += get_metric_card_html(**card)
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 def aggregate_session_data():
     """Aggregate data from all scans in history."""
@@ -344,13 +376,19 @@ def main():
         st.markdown('<p class="sidebar-header">Configuration</p>', unsafe_allow_html=True)
         
         st.markdown("##### AI Analysis")
+        use_llm = st.toggle(
+            "Enable AI Analysis",
+            value=True,
+            disabled=nav_disabled,
+            help="Use LLM to explain risks and suggest fixes"
+        )
+        
         llm_provider = st.selectbox(
             "LLM Provider",
             ["snowflake_cortex", "openai", "anthropic"],
             index=0,
-            disabled=nav_disabled
+            disabled=nav_disabled or not use_llm
         )
-        use_llm = True
         
         st.markdown("##### Data Storage")
         use_snowflake = st.toggle(
@@ -414,14 +452,14 @@ def render_home_dashboard():
         sec_status = "SAFE"
         sec_color = "#10B981" # Green
     
-    # Row 1: Key Metrics Cards
-    c1, c2, c3, c4, c5 = st.columns(5)
-    
-    with c1: render_metric_card("Total Findings", f"{metrics['total']:,}", "Session Cumulative", icon="📌", color="#F43F5E")
-    with c2: render_metric_card("Critical Issues", f"{metrics['critical']}", "Immediate Action", icon="🔥", color="#DC2626")
-    with c3: render_metric_card("High Severity", f"{metrics['high']}", "Major Issues", icon="⚠️", color="#EA580C")
-    with c4: render_metric_card("Files Scanned", f"{metrics['files_scanned']}", "Total Files", icon="📂", color="#EAB308")
-    with c5: render_metric_card("Security Rating", sec_status, "System Status", icon="🛡️", color=sec_color)
+    # Metrics Grid
+    render_metrics_grid([
+        {"title": "Total Findings", "value": f"{metrics['total']:,}", "subtext": "Session Cumulative", "icon": "📌", "color": "#F43F5E"},
+        {"title": "Critical Issues", "value": f"{metrics['critical']}", "subtext": "Immediate Action", "icon": "🔥", "color": "#DC2626"},
+        {"title": "High Severity", "value": f"{metrics['high']}", "subtext": "Major Issues", "icon": "⚠️", "color": "#EA580C"},
+        {"title": "Files Scanned", "value": f"{metrics['files_scanned']}", "subtext": "Total Files", "icon": "📂", "color": "#EAB308"},
+        {"title": "Security Rating", "value": sec_status, "subtext": "System Status", "icon": "🛡️", "color": sec_color}
+    ])
     
     # --- 3. CHARTS (Deep Dive) ---
     # Only show if there is data
@@ -500,8 +538,49 @@ def render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_
     
     # Hero Upload Section
     st.markdown('<div class="upload-container">', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Upload Code File", type=['py', 'js', 'java', 'go'], label_visibility="collapsed", disabled=st.session_state.get('is_scanning', False))
+    uploaded_file = st.file_uploader(
+        "Upload Code File", 
+        type=['py', 'js', 'jsx', 'ts', 'tsx', 'java', 'go', 'rs', 'rb', 'php'], 
+        label_visibility="collapsed", 
+        disabled=st.session_state.get('is_scanning', False)
+    )
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # Supported Languages Badges
+    st.markdown("""
+    <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; margin-bottom: 20px;">
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #3B82F6;">🐍</span> Python
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #FACC15;">📜</span> JS
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #61DAFB;">⚛️</span> JSX
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #3178C6;">📘</span> TS
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #61DAFB;">⚛️</span> TSX
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #F97316;">☕</span> Java
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #0EA5E9;">🐹</span> Go
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #F74C00;">🦀</span> Rust
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #CC342D;">💎</span> Ruby
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #E2E8F0; background: #1E293B; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155;">
+            <span style="color: #777BB4;">🐘</span> PHP
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
     
     if uploaded_file:
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -529,35 +608,12 @@ def render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_
 
 def render_scan_results_detailed(results):
     """Render the full results view (Findings Table + Details)."""
-    # Summary Metrics for THIS scan
-    c1, c2, c3 = st.columns(3)
-    
-    with c1: 
-        render_metric_card(
-            "Total Findings", 
-            f"{results['total_findings']}", 
-            "Issues Detected", 
-            icon="📌", 
-            color="#F43F5E"
-        )
-    
-    with c2: 
-        render_metric_card(
-            "Critical Issues", 
-            f"{results['severity_counts'].get('CRITICAL', 0)}", 
-            "Immediate Action", 
-            icon="🔥", 
-            color="#EF4444"
-        )
-        
-    with c3: 
-        render_metric_card(
-            "Scan Duration", 
-            f"{results['scan_duration_ms']}ms", 
-            "Processing Time", 
-            icon="⏱️", 
-            color="#3B82F6"
-        )
+    # Summary Metrics for THIS scan (Responsive Grid)
+    render_metrics_grid([
+        {"title": "Total Findings", "value": f"{results['total_findings']}", "subtext": "Issues Detected", "icon": "📌", "color": "#F43F5E"},
+        {"title": "Critical Issues", "value": f"{results['severity_counts'].get('CRITICAL', 0)}", "subtext": "Immediate Action", "icon": "🔥", "color": "#DC2626"},
+        {"title": "Scan Duration", "value": f"{results['scan_duration_ms']}ms", "subtext": "Processing Time", "icon": "⏱️", "color": "#3B82F6"}
+    ])
     
     # --- Download Reports ---
     report_paths = results.get('report_paths', {})
