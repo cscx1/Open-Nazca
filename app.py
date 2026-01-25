@@ -280,12 +280,9 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
     progress_bar = st.progress(0)
     status_text = st.empty()
     
-    # Fake progress simulation for UX
-    for i in range(1, 30):
-        time.sleep(0.01)
-        progress_bar.progress(i)
-    
+    # Initial status update without artificial delay
     status_text.markdown("**Initializing scanner parameters...**")
+    progress_bar.progress(5)
 
     try:
         # Create temp directory
