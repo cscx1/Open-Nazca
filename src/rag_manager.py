@@ -167,13 +167,13 @@ class RAGManager:
         finally:
             cursor.close()
 
-    def retrieve_context(self, query: str) -> str:
+    def retrieve_context(self, query: str) -> tuple[str, List[str]]:
         """
         Retrieve relevant context blocks from Snowflake without generating an answer.
-        Returns a formatted string of context with source attribution.
+        Returns: (formatted_string, list_of_unique_sources)
         """
         if not self.conn:
-            return ""
+            return ("", [])
             
         cursor = self.conn.cursor()
         try:
@@ -193,20 +193,23 @@ class RAGManager:
             results = cursor.fetchall()
             
             if not results:
-                return ""
+                return ("", [])
                 
             # Combine Context with Source Attribution
             context_blocks = []
+            sources = set()
+            
             for row in results:
                 text = row[0]
                 source = row[1]
+                sources.add(source)
                 context_blocks.append(f"Source: {source}\nContent: {text}")
                 
-            return "\n\n---\n\n".join(context_blocks)
+            return ("\n\n---\n\n".join(context_blocks), list(sources))
             
         except Exception as e:
             logger.error(f"Context retrieval failed: {e}")
-            return ""
+            return ("", [])
         finally:
             cursor.close()
 

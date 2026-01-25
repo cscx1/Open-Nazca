@@ -145,10 +145,14 @@ CRITICAL RULES:
         
         if self.rag_manager:
             try:
+                # Get list of available documents for strict verification
+                available_docs = self.rag_manager.list_documents()
+                docs_list = "\n".join([f"  - {doc}" for doc in available_docs]) if available_docs else "  (none)"
+                
                 # Query for policy regarding this specific vulnerability
                 # Fixed typo: coating -> coding
                 query = f"Company security policy and coding standards for handling {vulnerability_type}"
-                context_str = self.rag_manager.retrieve_context(query)
+                context_str, retrieved_sources = self.rag_manager.retrieve_context(query)
                 
                 if context_str:
                     context_found = True
@@ -159,25 +163,32 @@ CRITICAL RULES:
 {context_str}
 ================================================================================
 
-CRITICAL INSTRUCTIONS FOR FIX GENERATION:
-1. Answer using ONLY the provided context above. If the answer is not present, state "No specific policy found."
-2. Every claim must be followed by a direct quote or section reference from the PDF (e.g., [SOURCE_FILE, Section X.Y]).
-3. Do NOT use outside training data or generic best practices.
-4. Do NOT mention ANY specifics from the vulnerable code (API names, variable names, service names, etc.) in your explanation.
-5. The vulnerable code is shown ONLY so you know what type of issue to look up in the policy. DO NOT reference code details when explaining the policy.
-6. If the Knowledge Base does not contain specific coding guidelines for {vulnerability_type}, you MUST state: "No internal policy found for this vulnerability."
+AVAILABLE DOCUMENTS IN KNOWLEDGE BASE:
+{docs_list}
+
+CRITICAL INSTRUCTIONS - ZERO HALLUCINATION POLICY:
+1. You may ONLY cite documents from the "AVAILABLE DOCUMENTS" list above.
+2. You may ONLY use information that appears VERBATIM in the context above. Do NOT paraphrase, infer, or add information.
+3. If the context does not contain specific information about {vulnerability_type}, you MUST respond with:
+   RISK: No specific policy found for this vulnerability in the knowledge base.
+   FIX: No policy-based guidance available.
+   SOURCE: None
+4. Do NOT cite section numbers, page numbers, or chapters unless they appear EXACTLY in the context text above.
+5. Do NOT mention any documents not listed in "AVAILABLE DOCUMENTS" (e.g., no OWASP, no other NIST docs, etc.).
+6. Do NOT mention ANY specifics from the vulnerable code (API names, variable names, etc.) in your explanation.
 
 EXAMPLE OF WHAT NOT TO DO:
-❌ "Hardcoded secrets can lead to unauthorized access to the Spotify API" (mentions Spotify - that's from the code, not the policy!)
+❌ Citing "Section 5.3.1" when the context doesn't show that section number
+❌ Mentioning "OWASP Top 10" when it's not in the available documents
+❌ "Hardcoded secrets can access Spotify API" (mentions Spotify - code detail!)
 
-EXAMPLE OF CORRECT RESPONSE:
-✅ "Hardcoded secrets can lead to unauthorized access to third-party services" (generic, from policy only)
+If you cannot answer using ONLY the provided context, say so explicitly.
 """
                 else:
                     # FALLBACK: Try broad search for general standards (Dynamic Discovery)
                     # This avoids hardcoding "NIST" and allows any uploaded framework (ISO, Custom, etc.) to apply
                     general_query = "General security framework coding standards and compliance guidelines"
-                    general_context_str = self.rag_manager.retrieve_context(general_query)
+                    general_context_str, _ = self.rag_manager.retrieve_context(general_query)
                     
                     if general_context_str:
                         policy_context = f"""
@@ -193,7 +204,7 @@ No specific document was found for "{vulnerability_type}", but the following **G
 INSTRUCTIONS:
 1. Apply the **General Principles** from the context above to this specific vulnerability.
 2. Answer using ONLY the provided context.
-3. Every claim must be followed by a direct quote or section reference (e.g., "According to [Filename] Section X...").
+3. Every claim must be followed by a direct quote or section reference.
 4. If the general standards do not cover this issue, state: "No relevant policy found in Knowledge Base."
 """
                     else:
@@ -221,6 +232,7 @@ TECHNICAL ISSUE: {technical_description}
 
 {policy_context}
 
+
 Respond in EXACTLY this format:
 
 RISK: [Risk description mapped to NIST/OWASP]
@@ -247,6 +259,51 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
             
             # Parse response
             parsed = self._parse_llm_response(response)
+            
+            # STRICT VALIDATION: Sanitize source field to remove unauthorized citations
+            if self.rag_manager:
+                try:
+                    available_docs = self.rag_manager.list_documents()
+                    source_field = parsed.get('source', '')
+                    
+                    # Check if source cites any unauthorized documents
+                    if source_field and source_field.lower() != 'none':
+                        import re
+                        
+                        # Extract valid document names from source
+                        valid_docs = []
+                        for doc in available_docs:
+                            if doc.lower() in source_field.lower():
+                                valid_docs.append(doc)
+                        
+                        # Check for forbidden terms
+                        forbidden_terms = ['owasp', 'cwe', 'mitre', 'llmtop10', 'https://', 'http://', 'available at']
+                        has_forbidden = any(term in source_field.lower() for term in forbidden_terms)
+                        
+                        if has_forbidden or len(valid_docs) == 0:
+                            logger.warning(f"LLM cited unauthorized sources, sanitizing: {source_field}")
+                            
+                            # If we found any valid docs, use only those
+                            if valid_docs:
+                                # Sanitize: keep only the valid document names
+                                parsed['source'] = ', '.join(valid_docs)
+                            else:
+                                # No valid docs found - mark as None
+                                parsed['source'] = 'None'
+                    
+                    # STRICT CREDIBILITY: If no valid source is cited, REJECT the analysis
+                    # We do not guess or infer. If the AI didn't cite it, we fallback to non-AI defaults.
+                    if not parsed.get('source') or parsed['source'] == 'None':
+                        logger.warning(f"LLM failed to cite a source for {vulnerability_type}. Reverting to fallback analysis for credibility.")
+                        return self._fallback_analysis(vulnerability_type, technical_description)
+
+                except Exception as e:
+                    logger.warning(f"Could not validate source citations: {e}")
+            
+            # Inject source header into risk explanation AFTER validation/fallback
+            final_source = parsed.get('source', '')
+            if final_source and final_source.lower() != 'none':
+                parsed['risk_explanation'] = f"📚 Source: {final_source}\n\n{parsed['risk_explanation']}"
             
             # STRICT MODE ENFORCEMENT for Empty RAG
             # If the response contains the "No policy" marker, force truncation of any hallucinations
@@ -467,7 +524,7 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
         # Clean the response
         response = response.strip()
         
-        # Try to extract RISK: section
+        # Try to extract RISK: section (ONLY THE FIRST ONE)
         if 'RISK:' in response.upper():
             parts = response.upper().split('RISK:')
             if len(parts) > 1:
@@ -482,7 +539,7 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
                 
                 risk_explanation = risk_part[:end_idx].strip()
         
-        # Try to extract FIX: section
+        # Try to extract FIX: section (ONLY THE FIRST ONE)
         if 'FIX:' in response.upper():
             fix_part = response[response.upper().find('FIX:') + 4:]
             
@@ -494,16 +551,35 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
                 
             suggested_fix = fix_part[:end_idx].strip()
 
-        # Try to extract SOURCE: section
+        # Try to extract SOURCE: section (ONLY THE FIRST ONE)
         if 'SOURCE:' in response.upper():
-            source_part = response[response.upper().find('SOURCE:') + 7:]
-            source = source_part.strip()
+            # Find the FIRST occurrence of SOURCE:
+            first_source_idx = response.upper().find('SOURCE:')
+            source_part = response[first_source_idx + 7:]
+            
+            # Extract until we hit another RISK/FIX/SOURCE or end of reasonable length
+            end_idx = len(source_part)
+            for marker in ['\nRISK:', '\nFIX:', '\nSOURCE:']:
+                idx = source_part.upper().find(marker)
+                if idx != -1:
+                    end_idx = min(end_idx, idx)
+            
+            # Also stop at newlines (source should be one line)
+            newline_idx = source_part.find('\n')
+            if newline_idx != -1 and newline_idx < end_idx:
+                end_idx = newline_idx
+                
+            source = source_part[:end_idx].strip()
         
         # Aggressive formatting cleanup - remove ALL markdown/HTML before doing anything else
         import re
         
         # Remove literal \n sequences that sometimes appear
         risk_explanation = risk_explanation.replace('\\n', ' ').replace('\\t', ' ')
+        
+        # Remove any stray "SOURCE:" lines that got included in the text
+        risk_explanation = re.sub(r'SOURCE:\s*[^\n]*', '', risk_explanation, flags=re.IGNORECASE)
+        suggested_fix = re.sub(r'SOURCE:\s*[^\n]*', '', suggested_fix, flags=re.IGNORECASE)
         
         # Remove markdown headers (# ## ### etc.)
         risk_explanation = re.sub(r'^#{1,6}\s+', '', risk_explanation, flags=re.MULTILINE)
@@ -569,9 +645,7 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
                     wrapped_paragraphs.append(textwrap.fill(para, width=100, break_long_words=False, break_on_hyphens=False))
             suggested_fix = '\n\n'.join(wrapped_paragraphs)
         
-        # Inject Source into Risk Explanation for Visibility (ONLY AT TOP - no duplicates)
-        if source and source.lower() != 'none':
-             risk_explanation = f"📚 Source: {source}\n\n{risk_explanation}"
+        # NOTE: Source injection moved to analyze_vulnerability() after validation/fallback
         
         return {
             'risk_explanation': risk_explanation,
@@ -671,7 +745,7 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
             }
         }
         
-        return fallback_explanations.get(
+        result = fallback_explanations.get(
             vulnerability_type,
             {
                 'risk_explanation': technical_description,
@@ -681,6 +755,12 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
                 )
             }
         )
+        
+        # Ensure source is explicitly None for fallbacks with visible header
+        result['source'] = 'None'
+        result['risk_explanation'] = f"📚 Source: None\n\n{result['risk_explanation']}"
+        
+        return result
     
     def batch_analyze(self, findings: list, max_workers: int = 15) -> list:
         """
