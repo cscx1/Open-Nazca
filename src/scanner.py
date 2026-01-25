@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 
 # Import all modules
+# Import all modules
 from .ingestion import CodeIngestion
 from .detectors import (
     PromptInjectionDetector,
@@ -19,6 +20,7 @@ from .detectors import (
 from .llm_reasoning import LLMAnalyzer
 from .snowflake_integration import SnowflakeClient
 from .report_generation import ReportGenerator
+from .rag_manager import RAGManager
 
 logger = logging.getLogger(__name__)
 
@@ -46,17 +48,23 @@ class AICodeScanner:
         Args:
             use_snowflake: Whether to store results in Snowflake
             use_llm_analysis: Whether to use LLM for analysis
-            llm_provider: LLM provider ('snowflake_cortex' [default], 'openai', or 'anthropic')
+            llm_provider: LLM provider
             max_file_size_mb: Maximum file size to scan
         """
         self.use_snowflake = use_snowflake
         self.use_llm_analysis = use_llm_analysis
-        
-        # Initialize components
         logger.info("Initializing AI Code Scanner...")
         
         self.ingestion = CodeIngestion(max_file_size_mb=max_file_size_mb)
         logger.info("✓ Code ingestion module loaded")
+        
+        # Initialize RAG Manager (for policy context)
+        self.rag_manager = None
+        try:
+            self.rag_manager = RAGManager()
+            logger.info("✓ RAG Manager initialized")
+        except Exception as e:
+            logger.warning(f"RAG Manager init failed: {e}")
         
         # Initialize detectors
         self.detectors = [
@@ -69,7 +77,11 @@ class AICodeScanner:
         # Initialize LLM analyzer (if enabled)
         if self.use_llm_analysis:
             try:
-                self.llm_analyzer = LLMAnalyzer(provider=llm_provider)
+                # Pass RAG Manager to Analyzer
+                self.llm_analyzer = LLMAnalyzer(
+                    provider=llm_provider,
+                    rag_manager=self.rag_manager
+                )
                 logger.info(f"✓ LLM analyzer initialized ({llm_provider})")
             except Exception as e:
                 logger.warning(f"LLM analyzer not available: {e}. Using fallback mode.")
