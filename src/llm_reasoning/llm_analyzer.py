@@ -144,11 +144,19 @@ CRITICAL RULES:
 {context_str}
 ================================================================================
 
-INSTRUCTIONS FOR FIX GENERATION:
-1. Answer using ONLY the provided context. If the answer is not present, state that you do not know.
+CRITICAL INSTRUCTIONS FOR FIX GENERATION:
+1. Answer using ONLY the provided context above. If the answer is not present, state "No specific policy found."
 2. Every claim must be followed by a direct quote or section reference from the PDF (e.g., [SOURCE_FILE, Section X.Y]).
 3. Do NOT use outside training data or generic best practices.
-4. If the Knowledge Base does not contain specific coding guidelines for {vulnerability_type}, you MUST state: "No internal policy found for this vulnerability."
+4. Do NOT mention ANY specifics from the vulnerable code (API names, variable names, service names, etc.) in your explanation.
+5. The vulnerable code is shown ONLY so you know what type of issue to look up in the policy. DO NOT reference code details when explaining the policy.
+6. If the Knowledge Base does not contain specific coding guidelines for {vulnerability_type}, you MUST state: "No internal policy found for this vulnerability."
+
+EXAMPLE OF WHAT NOT TO DO:
+❌ "Hardcoded secrets can lead to unauthorized access to the Spotify API" (mentions Spotify - that's from the code, not the policy!)
+
+EXAMPLE OF CORRECT RESPONSE:
+✅ "Hardcoded secrets can lead to unauthorized access to third-party services" (generic, from policy only)
 """
                 else:
                     # FALLBACK: Try broad search for general standards (Dynamic Discovery)
@@ -198,14 +206,16 @@ TECHNICAL ISSUE: {technical_description}
 
 {policy_context}
 
-
 Respond in EXACTLY this format:
 
 RISK: [Risk description mapped to NIST/OWASP]
 
 FIX: [Code fix]
 
-SOURCE: [Exact filename of the policy document used. If using General Standards, cite that filename. If none, say "None".]
+SOURCE: [Exact filename and specific location (page number or section) where you found this information. Format: "Filename, Page X" or "Filename, Section Y.Z". If none, say "None".]
+
+CRITICAL: Do NOT add inline citations like [Filename, Page X] in your RISK or FIX sections. The source will be displayed separately at the top.
+Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
 
 """
 
@@ -302,33 +312,59 @@ SOURCE: [Exact filename of the policy document used. If using General Standards,
         
         try:
             with SnowflakeClient() as client:
-                # Combine system prompt and user prompt
-                full_prompt = f"{self.system_prompt}\n\n{user_prompt}"
+                import json
                 
-                # Escape single quotes for SQL and special characters
-                escaped_prompt = full_prompt.replace("'", "''").replace("\\", "\\\\")
+                # Build conversation array as Python object
+                conversation = [
+                    {'role': 'system', 'content': self.system_prompt},
+                    {'role': 'user', 'content': user_prompt}
+                ]
+                
+                # Serialize to JSON string
+                conversation_json = json.dumps(conversation)
+                
+                # Escape for SQL: backslashes first, then single quotes
+                conversation_escaped = conversation_json.replace("\\", "\\\\").replace("'", "''")
                 escaped_model = self.model.replace("'", "''")
-
-                # Call Snowflake Cortex COMPLETE function
-                # Use string formatting instead of parameterized query to avoid % issues
-                # Reverting to 2-arg signature due to SQL compilation errors with options object
+                
+                # Use conversation array format to enable options parameter
                 query = f"""
                 SELECT SNOWFLAKE.CORTEX.COMPLETE(
                     '{escaped_model}',
-                    '{escaped_prompt}'
+                    PARSE_JSON('{conversation_escaped}'),
+                    OBJECT_CONSTRUCT('temperature', 0.0)
                 ) AS response
                 """
                 
                 client.cursor.execute(query)
                 result = client.cursor.fetchone()
                 
-                if result and 'RESPONSE' in result:
-                    return result['RESPONSE']
-                elif result:
-                    # Try lowercase key
-                    return result.get('response', str(result))
+                if result:
+                    response_data = result.get('RESPONSE') or result.get('response')
+                    
+                    if response_data:
+                        # When using conversation array format, Cortex returns a JSON object
+                        # with structure: {"choices": [{"messages": "..."}], "created": ..., "model": ..., "usage": ...}
+                        # We need to extract just the message content
+                        import json
+                        try:
+                            parsed_response = json.loads(response_data)
+                            # Extract the actual message from the response
+                            if 'choices' in parsed_response and len(parsed_response['choices']) > 0:
+                                message = parsed_response['choices'][0].get('messages', '')
+                            elif 'message' in parsed_response:
+                                message = parsed_response['message']
+                            else:
+                                # Fallback to the whole response if structure is unexpected
+                                message = response_data
+                            return message
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            # If parsing fails, return as-is
+                            return response_data
+                    else:
+                        raise ValueError("No response from Snowflake Cortex")
                 else:
-                    raise ValueError("No response from Snowflake Cortex")
+                    raise ValueError("No result from Snowflake Cortex")
         
         except Exception as e:
             logger.error(f"Snowflake Cortex error: {e}")
@@ -448,9 +484,42 @@ SOURCE: [Exact filename of the policy document used. If using General Standards,
             source_part = response[response.upper().find('SOURCE:') + 7:]
             source = source_part.strip()
         
-        # Clean up - remove any code blocks or markdown from text fields
-        risk_explanation = risk_explanation.replace('```', '').replace('**', '').strip()
-        source = source.replace('```', '').replace('**', '').strip()
+        # Aggressive formatting cleanup - remove ALL markdown/HTML before doing anything else
+        import re
+        
+        # Remove literal \n sequences that sometimes appear
+        risk_explanation = risk_explanation.replace('\\n', ' ').replace('\\t', ' ')
+        
+        # Remove markdown headers (# ## ### etc.)
+        risk_explanation = re.sub(r'^#{1,6}\s+', '', risk_explanation, flags=re.MULTILINE)
+        
+        # Remove bold/italic (* ** _ __)
+        risk_explanation = risk_explanation.replace('**', '').replace('*', '').replace('__', '').replace('_', '')
+        
+        # Remove code blocks
+        risk_explanation = risk_explanation.replace('```', '')
+        
+        # Remove inline citations with brackets like [NIST.AI.100-1.pdf, Page 21]
+        risk_explanation = re.sub(r'\[.*?\.pdf.*?\]', '', risk_explanation)
+        risk_explanation = re.sub(r'\[.*?Page \d+.*?\]', '', risk_explanation, flags=re.IGNORECASE)
+        
+        # Same for source field - also remove any metadata cruft
+        source = source.replace('**', '').replace('*', '').replace('```', '').strip()
+        # Remove metadata like '" } ], "created":' etc.
+        source = re.sub(r'["\}].*$', '', source).strip()
+        
+        # Clean up suggested_fix (but keep code formatting intact for actual code examples)
+        # Only remove headers and bold/italic, not code blocks
+        suggested_fix = suggested_fix.replace('\\n', '\n').replace('\\t', '\t')  # Normalize escapes
+        suggested_fix = re.sub(r'^#{1,6}\s+', '', suggested_fix, flags=re.MULTILINE)
+        suggested_fix = suggested_fix.replace('__', '').replace('_', '')
+        
+        risk_explanation = risk_explanation.strip()
+        suggested_fix = suggested_fix.strip()
+        
+        # Clean up multiple spaces and trailing punctuation artifacts
+        risk_explanation = re.sub(r'\s+', ' ', risk_explanation)
+        risk_explanation = re.sub(r'\s*\.\s*\.\s*$', '.', risk_explanation)  # Remove trailing ". ."
         
         # Remove leading/trailing quotes
         risk_explanation = risk_explanation.strip('"\'')
@@ -467,9 +536,9 @@ SOURCE: [Exact filename of the policy document used. If using General Standards,
         risk_explanation = self.clean_llm_response(risk_explanation[:800])
         suggested_fix = self.clean_llm_response(suggested_fix[:800])
         
-        # Inject Source into Risk Explanation for Visibility
+        # Inject Source into Risk Explanation for Visibility (ONLY AT TOP - no duplicates)
         if source and source.lower() != 'none':
-             risk_explanation = f"**📚 Source: {source}**\n\n{risk_explanation}"
+             risk_explanation = f"📚 Source: {source}\n\n{risk_explanation}"
         
         return {
             'risk_explanation': risk_explanation,
