@@ -7,6 +7,7 @@ import os
 from typing import Dict, Optional
 import logging
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import LLM clients
 try:
@@ -491,19 +492,21 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
             }
         )
     
-    def batch_analyze(self, findings: list) -> list:
+    def batch_analyze(self, findings: list, max_workers: int = 15) -> list:
         """
-        Analyze multiple findings in batch.
+        Analyze multiple findings in batch with parallel processing.
         
         Args:
             findings: List of Finding objects
+            max_workers: Maximum number of parallel workers (default: 15 for Snowflake)
         
         Returns:
             List of findings with added LLM analysis
         """
         analyzed_findings = []
         
-        for finding in findings:
+        def analyze_single_finding(finding):
+            """Helper function to analyze a single finding"""
             try:
                 analysis = self.analyze_vulnerability(
                     vulnerability_type=finding.vulnerability_type,
@@ -516,7 +519,7 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
                 finding.metadata = finding.metadata or {}
                 finding.metadata['llm_analysis'] = analysis
                 
-                analyzed_findings.append((finding, analysis))
+                return (finding, analysis, None)
                 
             except Exception as e:
                 logger.warning(f"Failed to analyze finding: {e}")
@@ -527,9 +530,25 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
                 )
                 finding.metadata = finding.metadata or {}
                 finding.metadata['llm_analysis'] = analysis
-                analyzed_findings.append((finding, analysis))
+                return (finding, analysis, str(e))
         
-        logger.info(f"✓ Analyzed {len(analyzed_findings)} findings")
+        # Use ThreadPoolExecutor for parallel processing
+        logger.info(f"🚀 Analyzing {len(findings)} findings with {max_workers} parallel workers")
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_finding = {executor.submit(analyze_single_finding, finding): finding 
+                                for finding in findings}
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_finding):
+                finding, analysis, error = future.result()
+                analyzed_findings.append((finding, analysis))
+                
+                if error:
+                    logger.debug(f"Used fallback for {finding.vulnerability_type}")
+        
+        logger.info(f"✓ Analyzed {len(analyzed_findings)} findings in parallel")
         return analyzed_findings
 
 

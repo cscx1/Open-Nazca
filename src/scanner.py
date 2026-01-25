@@ -163,17 +163,14 @@ class AICodeScanner:
             
             # Step 4: LLM Analysis (if enabled)
             if self.use_llm_analysis and all_findings:
-                logger.info(f"\n[4/5] Running LLM analysis on {len(all_findings)} findings...")
+                logger.info(f"\n[4/5] Running LLM analysis on {len(all_findings)} findings with 15 parallel workers...")
                 
-                for i, finding in enumerate(all_findings, 1):
+                # Use batch_analyze for parallel processing
+                analyzed_results = self.llm_analyzer.batch_analyze(all_findings, max_workers=15)
+                
+                # Store analysis in Snowflake and update findings
+                for i, (finding, analysis) in enumerate(analyzed_results, 1):
                     try:
-                        analysis = self.llm_analyzer.analyze_vulnerability(
-                            vulnerability_type=finding.vulnerability_type,
-                            code_snippet=finding.code_snippet,
-                            technical_description=finding.description,
-                            language=file_data['language']
-                        )
-                        
                         # Store analysis in Snowflake
                         if self.use_snowflake:
                             # First, insert the finding
@@ -199,15 +196,10 @@ class AICodeScanner:
                                 suggested_fix=analysis['suggested_fix']
                             )
                         
-                        # Add analysis to finding object for reports
-                        finding.metadata = finding.metadata or {}
-                        finding.metadata['risk_explanation'] = analysis['risk_explanation']
-                        finding.metadata['suggested_fix'] = analysis['suggested_fix']
-                        
-                        logger.info(f"  ✓ Analyzed finding {i}/{len(all_findings)}")
+                        logger.info(f"  ✓ Stored finding {i}/{len(analyzed_results)}")
                         
                     except Exception as e:
-                        logger.warning(f"  ⚠ Failed to analyze finding {i}: {e}")
+                        logger.warning(f"  ⚠ Failed to store finding {i}: {e}")
                 
                 logger.info("✓ LLM analysis complete")
             else:
@@ -264,9 +256,17 @@ class AICodeScanner:
             for finding in all_findings:
                 finding_dict = finding.to_dict()
                 # Add LLM analysis if available
-                if finding.metadata and 'risk_explanation' in finding.metadata:
-                    finding_dict['risk_explanation'] = finding.metadata['risk_explanation']
-                    finding_dict['suggested_fix'] = finding.metadata['suggested_fix']
+                if finding.metadata:
+                    # Check for nested llm_analysis (from batch_analyze)
+                    if 'llm_analysis' in finding.metadata:
+                        analysis = finding.metadata['llm_analysis']
+                        finding_dict['risk_explanation'] = analysis.get('risk_explanation')
+                        finding_dict['suggested_fix'] = analysis.get('suggested_fix')
+                    # Fallback for direct keys
+                    elif 'risk_explanation' in finding.metadata:
+                        finding_dict['risk_explanation'] = finding.metadata['risk_explanation']
+                        finding_dict['suggested_fix'] = finding.metadata['suggested_fix']
+                        
                 findings_dicts.append(finding_dict)
             
             if generate_reports:
