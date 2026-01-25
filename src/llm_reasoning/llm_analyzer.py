@@ -124,6 +124,21 @@ CRITICAL RULES:
         """
         Generate plain-language risk explanation and safe fix suggestion.
         """
+        # Early check: If RAG database is empty, skip LLM analysis entirely
+        if self.rag_manager:
+            try:
+                # Check if the knowledge base has any documents
+                documents = self.rag_manager.list_documents()
+                if not documents or len(documents) == 0:
+                    logger.info("Knowledge base is empty - skipping LLM analysis")
+                    return {
+                        'risk_explanation': 'LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.',
+                        'suggested_fix': 'Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.',
+                        'source': 'None'
+                    }
+            except Exception as e:
+                logger.warning(f"Could not check knowledge base status: {e}")
+        
         # 1. Retrieve RAG Context if available
         policy_context = ""
         context_found = False
@@ -535,6 +550,24 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
         # Clean up truncated responses and limit length
         risk_explanation = self.clean_llm_response(risk_explanation[:800])
         suggested_fix = self.clean_llm_response(suggested_fix[:800])
+        
+        # Wrap suggested_fix text to fit within readable width (100 chars)
+        import textwrap
+        # Only wrap if it's plain text (no code blocks with ```)
+        if '```' not in suggested_fix and '\n' not in suggested_fix:
+            suggested_fix = textwrap.fill(suggested_fix, width=100, break_long_words=False, break_on_hyphens=False)
+        elif '\n' in suggested_fix:
+            # For multi-line content (code examples), wrap each paragraph separately
+            paragraphs = suggested_fix.split('\n\n')
+            wrapped_paragraphs = []
+            for para in paragraphs:
+                if para.strip().startswith(('#', '-', '*', '```')) or '=' in para or 'import ' in para:
+                    # Keep code/lists as-is
+                    wrapped_paragraphs.append(para)
+                else:
+                    # Wrap prose
+                    wrapped_paragraphs.append(textwrap.fill(para, width=100, break_long_words=False, break_on_hyphens=False))
+            suggested_fix = '\n\n'.join(wrapped_paragraphs)
         
         # Inject Source into Risk Explanation for Visibility (ONLY AT TOP - no duplicates)
         if source and source.lower() != 'none':
