@@ -256,9 +256,17 @@ class AICodeScanner:
             for finding in all_findings:
                 finding_dict = finding.to_dict()
                 # Add LLM analysis if available
-                if finding.metadata and 'risk_explanation' in finding.metadata:
-                    finding_dict['risk_explanation'] = finding.metadata['risk_explanation']
-                    finding_dict['suggested_fix'] = finding.metadata['suggested_fix']
+                if finding.metadata:
+                    # Check for nested llm_analysis (from batch_analyze)
+                    if 'llm_analysis' in finding.metadata:
+                        analysis = finding.metadata['llm_analysis']
+                        finding_dict['risk_explanation'] = analysis.get('risk_explanation')
+                        finding_dict['suggested_fix'] = analysis.get('suggested_fix')
+                    # Fallback for direct keys
+                    elif 'risk_explanation' in finding.metadata:
+                        finding_dict['risk_explanation'] = finding.metadata['risk_explanation']
+                        finding_dict['suggested_fix'] = finding.metadata['suggested_fix']
+                        
                 findings_dicts.append(finding_dict)
             
             if generate_reports:

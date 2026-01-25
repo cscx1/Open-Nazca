@@ -6,8 +6,7 @@ from datetime import datetime
 import time
 import plotly.express as px
 import pandas as pd
-import plotly.express as px
-import pandas as pd
+import plotly.graph_objects as go
 
 # Add parent directory to path to import src modules
 sys.path.insert(0, str(Path(__file__).parent))
@@ -16,258 +15,689 @@ from src.scanner import AICodeScanner
 
 # Page configuration
 st.set_page_config(
-    page_title="LLMCheck - AI Code Security Scanner",
-    page_icon="🔒",
+    page_title="LLMCheck Security Analytics",
+    page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Glassmorphism and Premium Feel
+# --- Custom CSS for Dark Analytics Theme ---
 st.markdown("""
 <style>
-    /* Global Font */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    code {
-        font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Background and Glassmorphism */
+    /* Main Background */
     .stApp {
-        background-color: #0e1117;
-        background-image: radial-gradient(circle at 50% 10%, #2e1065 0%, #0e1117 50%);
-        background-attachment: fixed;
-    }
-    
-    .glass-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 2rem;
+        background-color: #000E1A; /* Very dark navy */
+        color: #ffffff;
     }
 
-    /* Header Styling */
-    .main-header {
-        text-align: center;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a; /* Deep Slate Sidebar */
+        border-right: 1px solid #334155;
     }
     
-    .main-header h1 {
-        background: linear-gradient(90deg, #a78bfa 0%, #f472b6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-    }
-    
-    .main-header p {
-        color: #d1d5db;
-        font-size: 1.2rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    /* Upload Area */
-    .upload-area {
-        border: 2px dashed #4c1d95;
-        border-radius: 15px;
-        padding: 3rem;
-        text-align: center;
-        background: rgba(30, 27, 75, 0.3);
-        transition: all 0.3s ease;
-    }
-    
-    .upload-area:hover {
-        border-color: #7c3aed;
-        background: rgba(30, 27, 75, 0.5);
-    }
-
-    /* Language Grid */
-    .lang-container {
-        display: flex;
-        justify-content: center;
-        margin-top: 2rem;
+    /* Sidebar premium buttons (Launch Scan) */
+    .stButton > button {
         width: 100%;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #4338CA 0%, #3730A3 100%); /* Deep Indigo / Corporate Blue */
+        color: white;
+        border: 1px solid #312E81;
+        height: 44px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        font-size: 14px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     
-    .lang-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 1.5rem;
-        text-align: center;
-        max-width: 800px;
+    .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+        border-color: #6366F1;
+        color: white;
     }
 
-    @media (max-width: 768px) {
-        .lang-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
+    /* Download Buttons - Secondary Hierarchy */
+    .stDownloadButton > button {
+        width: 100%;
+        border-radius: 4px;
+        background-color: #1E293B !important; /* Solid Slate Gray */
+        color: #94A3B8 !important; /* Muted Text */
+        border: 1px solid #334155 !important;
+        height: 38px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .stDownloadButton > button:hover {
+        background-color: #334155 !important;
+        color: white !important;
+        border-color: #475569 !important;
     }
     
-    .lang-item {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 1.2rem;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        transition: all 0.3s ease;
+    /* Styled Multiselect Tags (Muted Slate) */
+    span[data-baseweb="tag"] {
+        background-color: #334155 !important; /* Muted Slate Blue */
+        color: #E2E8F0 !important;
+        border: 1px solid #475569;
+        border-radius: 4px;
+    }
+    
+    /* Remove default top padding */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 2rem;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6, p, div {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Monospace for code/security terms */
+    .mono-font {
+        font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace !important;
+    }
+
+    h1 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 0px;
+    }
+
+    h3 {
+        font-size: 18px;
+        font-weight: 500;
+        color: #B0B8C1;
+        margin-top: 0px;
+    }
+
+    /* Sidebar Elements */
+    .sidebar-logo-container {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #1E2D3D;
+    }
+    
+    .sidebar-header {
+        color: #94A3B8;
+        font-size: 11px;
+        font-weight: 700;
+        margin-top: 20px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Metric Cards - Cyber Style */
+    div[data-testid="metric-container"] {
+        background-color: #0B1120;
+        border: 1px solid #1E293B;
+        border-radius: 4px;
+        padding: 15px;
+    }
+
+    .metric-card {
+        background-color: #0B1120; /* Darker Space Blue */
+        border: 1px solid #334155; /* Sharp Border */
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        border-radius: 4px; /* Sharper corners */
+        padding: 16px;
+        margin-bottom: 16px;
+        min-height: 160px;
         display: flex;
         flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        border-color: #6366F1; /* Indigo Border */
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); /* Indigo Glow */
+        transform: translateY(-2px);
+    }
+    
+    .metric-card-header {
+        display: flex;
         align-items: center;
-        justify-content: center;
-        cursor: default;
+        margin-bottom: 8px;
+        background-color: #1E293B;
+        padding: 6px 10px;
+        border-radius: 4px;
+        width: fit-content;
     }
     
-    .lang-item:hover {
-        transform: translateY(-5px);
-        border-color: #8b5cf6;
-        background: rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+    .metric-icon {
+        margin-right: 8px;
+        font-size: 14px;
     }
     
-    .lang-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .lang-name {
-        font-size: 0.9rem;
-        color: #e5e7eb;
+    .metric-title {
+        color: #94A3B8;
+        font-size: 12px;
         font-weight: 600;
-    }
-
-    /* Custom Buttons */
-    .stButton button {
-        background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 10px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    .stButton button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-    }
-
-    /* Progress Bar */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #7c3aed 0%, #db2777 100%);
-    }
-
-    /* Metrics */
-    div[data-testid="stMetricValue"] {
-        font-size: 2rem;
-        color: #f3e8ff;
+    .metric-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 4px 0;
+        letter-spacing: 0.5px;
+        text-shadow: 0 0 10px rgba(255,255,255,0.1);
+        word-wrap: break-word;
+        font-family: 'JetBrains Mono', monospace; /* Tech feel for numbers */
     }
     
-    div[data-testid="stMetricLabel"] {
-        color: #a5b4fc;
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background-color: rgba(255, 255, 255, 0.02);
-        border-radius: 10px;
+    .metric-subtext {
+        font-size: 12px;
+        color: #64748B;
+        margin-top: auto;
     }
 
-    /* File Uploader */
-    div[data-testid="stFileUploader"] {
-        padding: 1rem;
-        border-radius: 10px;
+    /* Status Badges - Sharper Colors */
+    .badge-critical { background-color: #DC2626; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; border: 1px solid #EF4444; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4); }
+    .badge-high { background-color: #EA580C; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; border: 1px solid #F97316; }
+    .badge-medium { background-color: #CA8A04; color: black; padding: 2px 8px; border-radius: 3px; font-size: 11px; border: 1px solid #EAB308; }
+    .badge-low { background-color: #2563EB; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; border: 1px solid #3B82F6; }
+    
+    /* Navigation */
+    .stRadio label {
+        font-size: 15px !important;
+        padding: 8px;
+        color: #E2E8F0 !important;
     }
+    
+    /* Chart Containers */
+    div[data-testid="stPlotlyChart"] {
+        background-color: #0B1120;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        padding: 0px; /* Remove padding to prevent scrollbars */
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+        overflow: hidden; /* Ensure content stays inside */
+    }
+    
+    div[data-testid="stPlotlyChart"]:hover {
+        border-color: #6366F1;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize Session State
-if 'scan_results' not in st.session_state:
-    st.session_state.scan_results = None
-if 'scan_history' not in st.session_state:
-    st.session_state.scan_history = []
 
-# Main Layout
-def main():
-    # Header
-    st.markdown("""
-        <div class="main-header">
-            <h1>LLMCheck</h1>
-            <p>Enterprise-grade security scanning for AI-generated code.
-            Detect prompt injections, secrets, and high-risk patterns instantly.</p>
+# --- Helper Functions ---
+
+def render_metric_card(title, value, subtext, icon="📌", color="#3B82F6"):
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-card-header">
+            <span class="metric-icon" style="color: {color};">{icon}</span>
+            <span class="metric-title">{title}</span>
         </div>
+        <div class="metric-value">{value}</div>
+        <div class="metric-subtext">{subtext}</div>
+    </div>
     """, unsafe_allow_html=True)
 
-    # Main Container
-    with st.container():
-        # Centering the scan area
-        col1, col2, col3 = st.columns([1, 6, 1])
+def aggregate_session_data():
+    """Aggregate data from all scans in history."""
+    if not st.session_state.scan_history:
+        return {
+            'total': 0, 'critical': 0, 'high': 0, 'medium': 0,
+            'files_scanned': 0, 'df_trends': pd.DataFrame(),
+            'df_types': pd.DataFrame(), 'df_severity': pd.DataFrame()
+        }
+    
+    total = 0
+    sev_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    trend_data = []
+    type_counts = {}
+    
+    for entry in st.session_state.scan_history:
+        results = entry['results']
+        total += results['total_findings']
+        
+        # Severity
+        for k, v in results['severity_counts'].items():
+            if k in sev_counts:
+                sev_counts[k] += v
+        
+        # Trend
+        trend_data.append({
+            'Time': entry['timestamp'],
+            'Findings': results['total_findings'],
+            'Filename': entry['filename']
+        })
+        
+        # Types
+        for finding in results['findings']:
+            t = finding['vulnerability_type']
+            type_counts[t] = type_counts.get(t, 0) + 1
+            
+    # DataFrames for charts
+    df_trends = pd.DataFrame(trend_data)
+    
+    df_types = pd.DataFrame([
+        {'Type': k, 'Count': v} for k, v in type_counts.items()
+    ]).sort_values('Count', ascending=True) # Ascending for bar chart
+    
+    df_severity = pd.DataFrame([
+        {'Severity': k, 'Count': v} for k, v in sev_counts.items() if v > 0
+    ])
+    
+    return {
+        'total': total,
+        'critical': sev_counts['CRITICAL'],
+        'high': sev_counts['HIGH'],
+        'medium': sev_counts['MEDIUM'],
+        'files_scanned': len(st.session_state.scan_history),
+        'df_trends': df_trends,
+        'df_types': df_types,
+        'df_severity': df_severity
+    }
+
+# --- Main Application ---
+
+def main():
+    # Initialize Session State
+    if 'scan_results' not in st.session_state:
+        st.session_state.scan_results = None
+    if 'scan_history' not in st.session_state:
+        st.session_state.scan_history = []
+
+    # --- Sidebar ---
+    with st.sidebar:
+        # Logo Area
+        st.markdown("""
+        <div class="sidebar-logo-container">
+            <h1 style="color: #F43F5E; font-size: 26px; font-weight: 800; letter-spacing: -1px;">LLM<span style="color: #ffffff;">CHECK</span></h1>
+            <p style="color: #64748B; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;">Security Analytics</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    # Zone 1: Navigation
+        st.markdown('<p class="sidebar-header">Navigation</p>', unsafe_allow_html=True)
+        
+        # Disable navigation if scanning
+        nav_disabled = st.session_state.get('is_scanning', False)
+        
+        page = st.radio(
+            "Navigation",
+            ["📊  Dashboard", "🔬  Analysis Lab", "📜  Scan History"],
+            label_visibility="collapsed",
+            disabled=nav_disabled
+        )
+        
+        st.markdown("---")
+        
+        # Zone 2: Configuration (Persistent)
+        st.markdown('<p class="sidebar-header">Configuration</p>', unsafe_allow_html=True)
+        
+        st.markdown("##### AI Analysis")
+        llm_provider = st.selectbox(
+            "LLM Provider",
+            ["snowflake_cortex", "openai", "anthropic"],
+            index=0,
+            disabled=nav_disabled
+        )
+        use_llm = True
+        
+        st.markdown("##### Data Storage")
+        use_snowflake = st.toggle(
+            "Store in Snowflake",
+            value=True,
+            disabled=nav_disabled,
+            help="Upload scan results and findings to Snowflake database"
+        )
+        
+        st.markdown("##### Reports")
+        report_formats = st.multiselect(
+            "Formats",
+            ["JSON", "HTML", "Markdown"],
+            default=["JSON", "HTML"],
+            disabled=nav_disabled
+        )
+        r_json = "JSON" in report_formats
+        r_html = "HTML" in report_formats
+        r_md = "Markdown" in report_formats
+        
+        # --- Footer ---
+        st.markdown("""
+        <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #1E293B; text-align: center;">
+            <p style="color: #64748B; font-size: 12px; margin-bottom: 5px;">HOYAHACK 2026</p>
+            <p style="color: #475569; font-size: 10px;">POWERED BY <span style="color: #29B5E8; font-weight: 600;">SNOWFLAKE CORTEX</span></p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    # --- Main Content ---
+    
+    # Dashboard Content
+    if "Dashboard" in page:
+        render_home_dashboard()
+    elif "Analysis Lab" in page:
+        render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_md)
+    elif "History" in page:
+        render_history_dashboard()
+
+def render_home_dashboard():
+    # Header
+    st.markdown("### 📊 Security Dashboard")
+    st.markdown('<p style="color: #64748B; margin-bottom: 2rem;">Aggregated security metrics and trends across all sessions.</p>', unsafe_allow_html=True)
+    
+    # --- METRICS (Real-time Results) ---
+    metrics = aggregate_session_data()
+    
+    # Determine Security Rating (Highest Severity)
+    if metrics['critical'] > 0:
+        sec_status = "CRITICAL"
+        sec_color = "#DC2626" # Ruby Red
+    elif metrics['high'] > 0:
+        sec_status = "HIGH"
+        sec_color = "#EA580C" # Orange
+    elif metrics['medium'] > 0:
+        sec_status = "MEDIUM"
+        sec_color = "#EAB308"
+    elif metrics['total'] > 0:
+        sec_status = "LOW"
+        sec_color = "#3B82F6"
+    else:
+        sec_status = "SAFE"
+        sec_color = "#10B981" # Green
+    
+    # Row 1: Key Metrics Cards
+    c1, c2, c3, c4, c5 = st.columns(5)
+    
+    with c1: render_metric_card("Total Findings", f"{metrics['total']:,}", "Session Cumulative", icon="📌", color="#F43F5E")
+    with c2: render_metric_card("Critical Issues", f"{metrics['critical']}", "Immediate Action", icon="🔥", color="#DC2626")
+    with c3: render_metric_card("High Severity", f"{metrics['high']}", "Major Issues", icon="⚠️", color="#EA580C")
+    with c4: render_metric_card("Files Scanned", f"{metrics['files_scanned']}", "Total Files", icon="📂", color="#EAB308")
+    with c5: render_metric_card("Security Rating", sec_status, "System Status", icon="🛡️", color=sec_color)
+    
+    # --- 3. CHARTS (Deep Dive) ---
+    # Only show if there is data
+    if metrics['total'] > 0:
+        st.markdown("### 📈 Security Insights")
+        g1, g2, g3 = st.columns(3)
+        
+        # Chart Design Helpers
+        chart_bg = "#0B1120"
+        
+        # Chart 1: Trend Line (Findings over Time)
+        with g1:
+            if not metrics['df_trends'].empty:
+                fig1 = px.line(metrics['df_trends'], x="Time", y="Findings", markers=True, title="<b>FINDINGS TREND</b>")
+                fig1.update_traces(line_color='#6366F1', line_width=3) # Electric Indigo Graph
+                fig1.update_layout(
+                    paper_bgcolor=chart_bg,
+                    plot_bgcolor=chart_bg,
+                    font={'color': '#A0AEBC'},
+                    title_font={'size': 14, 'color': '#A0AEBC'},
+                    margin=dict(l=40, r=20, t=60, b=40),
+                    height=320,
+                    xaxis=dict(showgrid=False, title=None),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', title='Count')
+                )
+                st.plotly_chart(fig1, key="trend_chart", on_select="ignore", selection_mode="points", width="stretch")
+
+        # Chart 2: Bar Chart (Vulnerability Types)
+        with g2:
+            if not metrics['df_types'].empty:
+                fig2 = px.bar(metrics['df_types'], x="Count", y="Type", orientation='h', title="<b>VULNERABILITY TYPES</b>")
+                fig2.update_traces(marker_color='#0EA5E9')
+                fig2.update_layout(
+                    paper_bgcolor=chart_bg,
+                    plot_bgcolor=chart_bg,
+                    font={'color': '#A0AEBC'},
+                    title_font={'size': 14, 'color': '#A0AEBC'},
+                    margin=dict(l=20, r=20, t=60, b=40),
+                    height=320,
+                    xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', title=None),
+                    yaxis=dict(showgrid=False, title=None)
+                )
+                st.plotly_chart(fig2, key="type_chart", on_select="ignore", selection_mode="points", width="stretch")
+
+        # Chart 3: Pie Chart (Severity Distribution)
+        with g3:
+            if not metrics['df_severity'].empty:
+                fig3 = px.pie(metrics['df_severity'], values='Count', names='Severity', 
+                              color='Severity',
+                              title="<b>SEVERITY DISTRIBUTION</b>",
+                              color_discrete_map={
+                                  'CRITICAL': '#DC2626',
+                                  'HIGH': '#EA580C',
+                                  'MEDIUM': '#EAB308',
+                                  'LOW': '#3B82F6'
+                              })
+                fig3.update_traces(textposition='inside', textinfo='percent+label', textfont_color='white')
+                fig3.update_layout(
+                    paper_bgcolor=chart_bg,
+                    plot_bgcolor=chart_bg,
+                    font={'color': '#ffffff'},
+                    title_font={'size': 14, 'color': '#A0AEBC'},
+                    margin=dict(l=20, r=20, t=60, b=40),
+                    height=320,
+                    showlegend=False
+                )
+                st.plotly_chart(fig3, key="sev_chart", on_select="ignore", selection_mode="points", width="stretch")
+    else:
+        # Empty State
+        st.info("👆 Go to the 'Analysis Lab' page to upload code and start collecting data.")
+
+def render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_md):
+    st.markdown("### 🔬 Security Analysis Lab")
+    st.markdown('<p style="color: #64748B;">Upload code to detect vulnerabilities, secrets, and injection risks.</p>', unsafe_allow_html=True)
+    
+    
+    # Hero Upload Section
+    st.markdown('<div class="upload-container">', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload Code File", type=['py', 'js', 'java', 'go'], label_visibility="collapsed", disabled=st.session_state.get('is_scanning', False))
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    if uploaded_file:
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-             # Settings (Always Visible)
-            with st.container(border=True):
-                st.markdown("#### ⚙️ Advanced Configuration & Settings")
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    use_snowflake = st.checkbox("💾 Save to Snowflake DB", value=False, help="Persist results for audit trails")
-                    use_llm = st.checkbox("🧠 Enable AI Analysis", value=True, help="Use LLM to explain risks")
-                with c2:
-                    if use_llm:
-                        llm_provider = st.selectbox("LLM Model", ["snowflake_cortex", "openai", "anthropic"])
-                        st.caption("Selected Provider: " + llm_provider)
-                    else:
-                        llm_provider = "snowflake_cortex"
-                        st.text("AI Analysis Disabled")
-                with c3:
-                    st.markdown("##### Report Formats")
-                    r_json = st.checkbox("JSON", value=True)
-                    r_html = st.checkbox("HTML", value=True)
-                    r_md = st.checkbox("Markdown", value=False)
-
-            # File Upload
-            st.markdown("### 📤 Upload Code for Analysis")
-            uploaded_file = st.file_uploader(
-                "Upload Code",
-                type=['py', 'js', 'jsx', 'ts', 'tsx', 'java', 'go', 'rs', 'rb', 'php'],
-                help="Drag and drop your code file here",
-                label_visibility="collapsed"
-            )
-
-            if uploaded_file:
-                st.success(f"Ready to scan: **{uploaded_file.name}** ({uploaded_file.size} bytes)")
-                
-                # Use a column layout for the button to control width if needed, or full width
-                if st.button("🚀 Start Security Audit"):
+            # Check if scanning
+            is_scanning = st.session_state.get('is_scanning', False)
+            
+            if is_scanning:
+                with st.spinner("🕵️ Analysis in progress... Please wait."):
                     perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_html, r_md)
-            
-            
-            # Supported Languages Grid (Only show if no results yet, to keep it clean)
-            if not st.session_state.scan_results and not uploaded_file:
-                st.markdown("""
-                <div class="lang-container">
-                    <div class="lang-grid">
-                        <div class="lang-item"><div class="lang-icon">🐍</div><div class="lang-name">Python</div></div>
-                        <div class="lang-item"><div class="lang-icon">📜</div><div class="lang-name">JavaScript</div></div>
-                        <div class="lang-item"><div class="lang-icon">📘</div><div class="lang-name">TypeScript</div></div>
-                        <div class="lang-item"><div class="lang-icon">☕</div><div class="lang-name">Java</div></div>
-                        <div class="lang-item"><div class="lang-icon">🔷</div><div class="lang-name">Go</div></div>
-                        <div class="lang-item"><div class="lang-icon">🦀</div><div class="lang-name">Rust</div></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    st.session_state.is_scanning = False
+                    st.rerun()
+            else:
+                 if st.button("🚀 Launch Security Scan", width="stretch", type="primary"):
+                    st.session_state.is_scanning = True
+                    st.rerun()
 
-    # Results Section
     if st.session_state.scan_results:
-        display_results(st.session_state.scan_results)
+        st.markdown("---")
+        st.markdown("#### 🔍 Latest Analysis Results")
+        render_scan_results_detailed(st.session_state.scan_results)
+
+
+# --- Result Rendering Helper ---
+
+def render_scan_results_detailed(results):
+    """Render the full results view (Findings Table + Details)."""
+    # Summary Metrics for THIS scan
+    c1, c2, c3 = st.columns(3)
+    
+    with c1: 
+        render_metric_card(
+            "Total Findings", 
+            f"{results['total_findings']}", 
+            "Issues Detected", 
+            icon="📌", 
+            color="#F43F5E"
+        )
+    
+    with c2: 
+        render_metric_card(
+            "Critical Issues", 
+            f"{results['severity_counts'].get('CRITICAL', 0)}", 
+            "Immediate Action", 
+            icon="🔥", 
+            color="#EF4444"
+        )
+        
+    with c3: 
+        render_metric_card(
+            "Scan Duration", 
+            f"{results['scan_duration_ms']}ms", 
+            "Processing Time", 
+            icon="⏱️", 
+            color="#3B82F6"
+        )
+    
+    # --- Download Reports ---
+    report_paths = results.get('report_paths', {})
+    if report_paths:
+        st.markdown('</div>', unsafe_allow_html=True) 
+        st.markdown("<h5 style='text-align: center; margin-top: 10px; margin-bottom: 20px;'>📥 Download Reports</h5>", unsafe_allow_html=True)
+        
+        # Center the buttons using spacers
+        n = len(report_paths)
+        if n == 1:
+            cols = st.columns([5, 2, 5])
+            button_cols = [cols[1]]
+        elif n == 2:
+            cols = st.columns([3, 2, 2, 3])
+            button_cols = cols[1:3]
+        elif n == 3:
+            cols = st.columns([2, 2, 2, 2, 2])
+            button_cols = cols[1:4]
+        else:
+            button_cols = st.columns(n)
+        
+        for i, (fmt, path_str) in enumerate(report_paths.items()):
+            try:
+                path = Path(path_str)
+                if path.exists():
+                    with open(path, "rb") as f:
+                        file_data = f.read()
+                    
+                    # Icons for formats
+                    f_icon = "📄"
+                    if fmt == 'html': f_icon = "🌐"
+                    if fmt == 'json': f_icon = "⚙️"
+                    if fmt == 'markdown': f_icon = "📝"
+                    
+                    with button_cols[i]:
+                        st.download_button(
+                            label=f"{f_icon} {fmt.upper()}",
+                            data=file_data,
+                            file_name=path.name,
+                            mime="text/html" if fmt == 'html' else ("application/json" if fmt == 'json' else "text/markdown"),
+                            key=f"dl_{fmt}_{results.get('scan_id', 'unknown')}_{i}",
+                            use_container_width=True
+                        )
+            except Exception as e:
+                pass
+
+
+    # Detailed Findings Table
+    if results.get('findings'):
+        # Transform findings for dataframe
+        df_findings = pd.DataFrame([
+            {
+                "Type": f['vulnerability_type'],
+                "Severity": f['severity'],
+                "Line": f.get('line_number', 'N/A'),
+                "Description": f['description'],
+                "Detector": f['detector_name']
+            }
+            for f in results['findings']
+        ])
+        
+        st.dataframe(
+            df_findings,
+            width="stretch",
+            column_config={
+                "Severity": st.column_config.TextColumn(
+                    "Severity",
+                    help="Severity Level",
+                    validate="^(CRITICAL|HIGH|MEDIUM|LOW)$"
+                )
+            },
+            hide_index=True
+        )
+        
+        # Expandable Details
+        for finding in results['findings']:
+            sev_class = f"badge-{finding['severity'].lower()}"
+            st.markdown(f"""
+            <div style="background: #0F2744; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155;">
+                <span class="{sev_class}">{finding['severity']}</span>
+                <span style="color: #A0AEBC; margin-left: 10px; font-weight: 600;">{finding['vulnerability_type']}</span>
+                <span style="float: right; color: #64748B; font-size: 12px;">Line {finding.get('line_number', 'N/A')}</span>
+                <p style="color: #E2E8F0; margin-top: 10px; font-size: 14px;">{finding['description']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Hidden by default code expander
+            with st.expander("View Code & Fix"):
+                 st.markdown("**Vulnerable Code:**")
+                 st.code(finding.get('code_snippet', ''), language='python')
+                 
+                 if finding.get('risk_explanation'):
+                    st.markdown("**🔍 AI Risk Analysis:**")
+                    st.info(finding['risk_explanation'])
+                    
+                 if finding.get('suggested_fix'):
+                    st.markdown("**🛠️ Suggested Remediation:**")
+                    st.code(finding['suggested_fix'], language='python')
+
+@st.dialog("Scan Details", width="large")
+def view_scan_details(filename, date, results):
+    st.markdown(f"**File:** `{filename}` | **Scanned:** `{date}`")
+    st.markdown("---")
+    render_scan_results_detailed(results)
+
+def render_history_dashboard():
+    if not st.session_state.scan_history:
+        st.info("No scan history available.")
+        return
+        
+    history_df = pd.DataFrame([
+        {
+            "Filename": h['filename'],
+            "Date": h['timestamp'],
+            "Total Issues": h['results']['total_findings'],
+            "Critical": h['results']['severity_counts'].get('CRITICAL', 0)
+        }
+        for h in st.session_state.scan_history
+    ])
+    
+    st.markdown("#### Scan History")
+    st.info("💡 **Tip:** Select a row to view full analysis details.")
+    
+    # Use selection to trigger popup
+    event = st.dataframe(
+        history_df, 
+        width="stretch",
+        on_select="rerun", 
+        selection_mode="single-row",
+        key="history_table"
+    )
+    
+    if len(event.selection.rows) > 0:
+        index = event.selection.rows[0]
+        selected_scan = st.session_state.scan_history[index]
+        view_scan_details(
+            selected_scan['filename'], 
+            selected_scan['timestamp'],
+            selected_scan['results']
+        )
 
 def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_html, r_md):
     # Prepare formats
@@ -278,15 +708,7 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
     
     # Progress Bar
     progress_bar = st.progress(0)
-    status_text = st.empty()
     
-    # Fake progress simulation for UX
-    for i in range(1, 30):
-        time.sleep(0.01)
-        progress_bar.progress(i)
-    
-    status_text.markdown("**Initializing scanner parameters...**")
-
     try:
         # Create temp directory
         temp_dir = Path('temp_scans')
@@ -301,8 +723,7 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
         with open(tmp_path, 'wb') as f:
             f.write(uploaded_file.read())
             
-        progress_bar.progress(50)
-        status_text.markdown("**Analyzing code structure and dependencies...**")
+        progress_bar.progress(30)
         
         # Scanner Init
         scanner = AICodeScanner(
@@ -311,8 +732,7 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
             llm_provider=llm_provider
         )
         
-        progress_bar.progress(70)
-        status_text.markdown("**Querying security models and pattern matching...**")
+        progress_bar.progress(60)
         
         # Scan
         results = scanner.scan_file(
@@ -332,14 +752,11 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
              pass
              
         progress_bar.progress(100)
-        status_text.markdown("**✅ Analysis Complete!**")
         time.sleep(0.5)
-        
-        # Clear progress bar
-        status_text.empty()
         progress_bar.empty()
         
         st.session_state.scan_results = results
+        st.success("Analysis Complete")
         
         # Add to history
         scan_entry = {
@@ -351,199 +768,6 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
         
     except Exception as e:
         st.error(f"Scan failed: {str(e)}")
-
-def display_results(results):
-    # Centering the results area to match the main upload area
-    col1, col2, col3 = st.columns([1, 6, 1])
-    with col2:
-        st.markdown("---")
-        
-        # Tabs for Audit and Graph
-        tab_audit, tab_graph = st.tabs(["📋 Audit Findings", "📈 Trends & Analysis"])
-        
-        with tab_audit:
-            st.header("📊 Audit Results")
-            
-            # Validation Check
-            if not results.get('success', False):
-                 st.error(f"Analysis Failed: {results.get('error')}")
-                 return
-    
-            # Metrics
-            c1, c2, c3, c4 = st.columns(4)
-            with c1: st.metric("Total Issues", results['total_findings'])
-            with c2: st.metric("Critical", results['severity_counts'].get('CRITICAL', 0), delta_color="inverse")
-            with c3: st.metric("High", results['severity_counts'].get('HIGH', 0), delta_color="inverse")
-            with c4: st.metric("Medium", results['severity_counts'].get('MEDIUM', 0), delta_color="off")
-    
-            # Detailed List
-            if results['total_findings'] > 0:
-                st.subheader("Detected Vulnerabilities")
-                
-                # Severity Filter
-                cols = st.columns([3, 1])
-                with cols[1]:
-                    severity_filter = st.multiselect(
-                        "Filter Severity",
-                        ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
-                        default=['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
-                    )
-                
-                filtered_findings = [f for f in results['findings'] if f['severity'] in severity_filter]
-                
-                if not filtered_findings:
-                    st.info("No findings match the selected severity filter.")
-                
-                for finding in filtered_findings:
-                    severity = finding['severity']
-                    
-                    # Dynamic badge color based on severity
-                    badge_color = {
-                        "CRITICAL": "#dc2626", # Red 600
-                        "HIGH": "#ea580c",     # Orange 600
-                        "MEDIUM": "#ca8a04",   # Yellow 600
-                        "LOW": "#2563eb"       # Blue 600
-                    }.get(severity, "#4b5563")
-    
-                    with st.expander(f"{finding['vulnerability_type']} (Line {finding.get('line_number', '?')})"):
-                        st.markdown(f'<span style="background-color: {badge_color}; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white;">{severity}</span>', unsafe_allow_html=True)
-                        st.markdown(f"**Detector:** {finding['detector_name']}")
-                        
-                        st.markdown("#### Description")
-                        st.write(finding['description'])
-                        
-                        st.markdown("#### Code")
-                        st.code(finding.get('code_snippet', ''), language='python')
-                        
-                        if finding.get('risk_explanation'):
-                            st.markdown("#### 🧠 AI Risk Analysis")
-                            st.info(finding['risk_explanation'])
-                        
-                        if finding.get('suggested_fix'):
-                            st.markdown("#### ✅ Recommended Fix")
-                            st.success(finding['suggested_fix'])
-            else:
-                st.markdown("""
-                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 2rem; text-align: center; margin: 2rem 0;">
-                    <h2 style="color: #34d399; margin-bottom: 0.5rem;">✅ No Security Issues Found</h2>
-                    <p style="color: #d1d5db;">Your code passed all enabled security checks.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Downloads
-            if results.get('report_paths'):
-                st.markdown("---")
-                st.subheader("📥 Download Reports")
-                cols = st.columns(len(results['report_paths']))
-                for i, (fmt, path) in enumerate(results['report_paths'].items()):
-                    with cols[i]:
-                        try:
-                            with open(path, "rb") as f:
-                                st.download_button(
-                                    f"Download {fmt.upper()}",
-                                    f,
-                                    file_name=Path(path).name,
-                                    mime='application/octet-stream',
-                                    width="stretch"
-                                )
-                        except Exception as e:
-                            st.error(f"Could not load {fmt} report.")
-    
-        with tab_graph:
-            st.header("📈 Session Analysis")
-            
-            if not st.session_state.scan_history:
-                st.info("No scan history available yet.")
-            else:
-                # Aggregate Data
-                all_findings = []
-                severity_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-                detector_counts = {}
-                
-                for entry in st.session_state.scan_history:
-                    # Severity
-                    counts = entry['results']['severity_counts']
-                    for sev, count in counts.items():
-                        severity_counts[sev] += count
-                    
-                    # Detectors
-                    for finding in entry['results']['findings']:
-                        det = finding['detector_name']
-                        detector_counts[det] = detector_counts.get(det, 0) + 1
-                        
-                # 1. Severity Distribution
-                sev_df = pd.DataFrame([
-                    {"Severity": k, "Count": v} 
-                    for k, v in severity_counts.items() 
-                    if v > 0
-                ])
-                
-                # 2. Detector Distribution
-                det_df = pd.DataFrame([
-                    {"Detector": k, "Count": v} 
-                    for k, v in detector_counts.items()
-                ])
-                
-                # Visualizations
-                c1, c2 = st.columns(2)
-                
-                with c1:
-                    st.subheader("Vulnerabilities by Severity")
-                    if not sev_df.empty:
-                        fig_sev = px.pie(
-                            sev_df, 
-                            values='Count', 
-                            names='Severity',
-                            hole=0.4,
-                            color='Severity',
-                            color_discrete_map={
-                                'CRITICAL': '#dc2626',
-                                'HIGH': '#ea580c',
-                                'MEDIUM': '#ca8a04',
-                                'LOW': '#2563eb'
-                            }
-                        )
-                        fig_sev.update_traces(textinfo='value+percent')
-                        fig_sev.update_layout(showlegend=True)
-                        st.plotly_chart(fig_sev, width="stretch")
-                    else:
-                        st.info("No vulnerabilities found.")
-    
-                with c2:
-                    st.subheader("Vulnerabilities by Detector")
-                    if not det_df.empty:
-                        fig_det = px.pie(
-                            det_df, 
-                            values='Count', 
-                            names='Detector',
-                            hole=0.4
-                        )
-                        fig_det.update_traces(textinfo='value+percent')
-                        fig_det.update_layout(showlegend=True)
-                        st.plotly_chart(fig_det, width="stretch")
-                    else:
-                        st.info("No vulnerabilities found.")
-    
-                st.markdown("---")
-                st.subheader("Session History")
-                
-                # History Table
-                history_data = []
-                for entry in st.session_state.scan_history:
-                    counts = entry['results']['severity_counts']
-                    history_data.append({
-                        "Filename": entry['filename'],
-                        "Time": entry['timestamp'],
-                        "Total Issues": entry['results']['total_findings'],
-                        "Critical": counts.get('CRITICAL', 0),
-                        "High": counts.get('HIGH', 0),
-                        "Medium": counts.get('MEDIUM', 0),
-                        "Low": counts.get('LOW', 0)
-                    })
-                
-                st.dataframe(pd.DataFrame(history_data), width="stretch")
-
-
 
 if __name__ == "__main__":
     main()
