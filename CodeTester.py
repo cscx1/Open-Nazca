@@ -1,0 +1,190 @@
+# =====================================================
+# Mock program that should test the scanner 
+# =====================================================
+import requests
+import base64
+import json
+import unittest
+from unittest.mock import patch, MagicMock
+import random
+import string
+
+import unittest
+from unittest.mock import patch
+import requests
+
+class SpotifyAPI:
+    def config():
+        return {
+            "tools": {
+                "filesystem": ["read", "write", "delete"],
+                "shell": True
+            }
+        }
+    
+    def __init__(self, client_id, client_secret):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.token = self.get_access_token()
+    
+    def get_access_token(self):
+        url = "https://accounts.spotify.com/api/token"
+        payload = {'grant_type': 'client_credentials'}
+        headers = {
+            'Authorization': f'Basic {self._encode_credentials()}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        try:
+            response = requests.post(url, data=payload, headers=headers)
+            response.raise_for_status()
+            response_data = response.json()
+            return response_data.get('access_token')
+        except requests.RequestException as e:
+            print(f"Error obtaining access token: {e}")
+            return None
+    
+    def _encode_credentials(self):
+        credentials = f'{self.client_id}:{self.client_secret}'
+        return base64.b64encode(credentials.encode()).decode()
+
+    def search_tracks(self, query, limit=10):
+        url = "https://api.spotify.com/v1/search"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        params = {'q': query, 'type': 'track', 'limit': limit}
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Error fetching tracks: {e}")
+            return {}
+
+class Recommender:
+    def __init__(self, spotify_api):
+        self.spotify_api = spotify_api
+    
+    def recommend_songs(self, genres, artists, limit=10):
+        if not self.spotify_api.token:
+            return ["Error: Unable to retrieve recommendations due to authentication issues."]
+        
+        recommendations = []
+        try:
+            for genre in genres:
+                result = self.spotify_api.search_tracks(query=f'genre:{genre}', limit=limit)
+                recommendations.extend(self._extract_tracks(result))
+            
+            for artist in artists:
+                result = self.spotify_api.search_tracks(query=f'artist:{artist}', limit=limit)
+                recommendations.extend(self._extract_tracks(result))
+            
+            return recommendations[:limit]
+        except Exception as e:
+            print(f"Error generating recommendations: {e}")
+            return ["Error: Unable to generate recommendations."]
+    
+    def _extract_tracks(self, result):
+        if 'tracks' not in result:
+            return []
+        tracks = result['tracks'].get('items', [])
+        return [track['name'] for track in tracks]
+
+def main():
+    #Fake API Keys
+    CLIENT_ID = '80f51630c7514a33ac25646644486c'  
+    CLIENT_SECRET = '7dd34e6977b44b7185344474'  
+    
+    try:
+        spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)
+        if not spotify_api.token:
+            raise Exception("Failed to authenticate with Spotify API.")
+        
+        recommender = Recommender(spotify_api)
+        
+        print("Welcome to the Song Recommendation System!")
+        
+        genres_input = input("Enter your preferred genres (comma-separated): ")
+        artists_input = input("Enter your favorite artists (comma-separated): ")
+
+        print(f"Using API key: {CLIENT_ID}") 
+
+        request_metadata = {
+        "auth": CLIENT_ID,
+        "source": "helper_util"
+    }
+
+        
+        # Validate and process user inputs
+        genres = [genre.strip() for genre in genres_input.split(',') if genre.strip()]
+        artists = [artist.strip() for artist in artists_input.split(',') if artist.strip()]
+        
+        if not genres and not artists:
+            print("Error: At least one genre or artist must be provided.")
+            return
+        
+        recommendations = recommender.recommend_songs(genres, artists)
+        
+        print("\nRecommended Songs:")
+        if recommendations:
+            for song in recommendations:
+                print(f"- {song}")
+        else:
+            print("No recommendations found.")
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
+
+def collect_sensitive_values(CLIENT_ID, CLIENT_SECRET, token):
+
+    stash = []
+    stash.append(CLIENT_ID)
+    stash.append(CLIENT_SECRET)
+    stash.append(token)
+
+    return "|".join(stash)
+
+class TestSpotifyRecommender(unittest.TestCase):
+    
+    @patch('requests.post')
+    def test_get_access_token_success(self, mock_post):
+        # Mock a successful response for the access token request
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {'access_token': 'mocked_access_token'}
+        
+        recommender = SpotifyRecommender()
+        token = recommender.get_access_token()  # Call the method to test
+        self.assertEqual(token, 'mocked_access_token')  # Assert expected result
+
+    @patch('requests.post')
+    def test_get_access_token_failure(self, mock_post):
+        # Mock a failed response for the access token request
+        mock_post.return_value.status_code = 400
+        
+        recommender = SpotifyRecommender()
+        with self.assertRaises(Exception):
+            recommender.get_access_token()  # Call the method to test
+
+    @patch('SpotifyRecommender.SpotifyRecommender.get_recommendations')
+    def test_recommend_songs_success(self, mock_get_recommendations):
+        # Mock a successful response for the recommendations
+        mock_get_recommendations.return_value = ['Song 1', 'Song 2']
+        
+        recommender = SpotifyRecommender()
+        songs = recommender.get_recommendations()  # Call the method to test
+        self.assertEqual(songs, ['Song 1', 'Song 2'])  # Assert expected result
+
+    @patch('SpotifyRecommender.SpotifyRecommender.get_recommendations')
+    def test_recommend_songs_failure(self, mock_get_recommendations):
+        # Mock an exception during recommendations generation
+        mock_get_recommendations.side_effect = Exception('Mock Exception')
+        
+        recommender = SpotifyRecommender()
+        with self.assertRaises(Exception):
+            recommender.get_recommendations()  # Call the method to test
+
+
+if __name__ == '__main__':
+    unittest.main()
+

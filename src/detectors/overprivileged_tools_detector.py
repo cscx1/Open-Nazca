@@ -167,6 +167,9 @@ class OverprivilegedToolsDetector(BaseDetector):
         # Perform structural analysis for tool definitions
         findings.extend(self._analyze_tool_structures(code, file_name))
         
+        # Detect dangerous permission configs (dicts with shell, delete, etc.)
+        findings.extend(self._analyze_permission_configs(code, file_name))
+        
         self.findings = findings
         return findings
     
@@ -256,6 +259,161 @@ class OverprivilegedToolsDetector(BaseDetector):
                     f"✓ Detected overprivileged agent at {file_name}:{line_num} "
                     f"({len(dangerous_ops_found)} dangerous ops)"
                 )
+        
+        return findings
+    
+    def _analyze_permission_configs(self, code: str, file_name: str) -> List[Finding]:
+        """
+        Analyze configuration dictionaries for dangerous permissions.
+        
+        Detects patterns like:
+        - "shell": True
+        - "filesystem": ["read", "write", "delete"]
+        - permissions granting destructive access
+        
+        Args:
+            code: Full source code
+            file_name: Name of the file
+        
+        Returns:
+            List of findings for dangerous configs
+        """
+        findings = []
+        lines = code.split('\n')
+        
+        # Dangerous permission patterns in config dictionaries
+        dangerous_config_patterns = [
+            # Shell access enabled
+            (r'["\']shell["\']\s*:\s*True', 'Shell Access', 
+             'Shell access enabled - allows arbitrary command execution'),
+            
+            # Delete permissions in lists
+            (r'["\'](?:filesystem|permissions|tools)["\']\s*:\s*\[.*?["\']delete["\'].*?\]',
+             'Delete Permission',
+             'Delete permission granted - allows file/data destruction'),
+            
+            # Write + Delete combo (very dangerous)
+            (r'\[.*?["\']write["\'].*?["\']delete["\'].*?\]',
+             'Write+Delete Permissions',
+             'Both write and delete permissions - high risk for data loss'),
+            
+            # Admin/root/sudo access
+            (r'["\'](?:admin|root|sudo|elevated)["\']?\s*:\s*True',
+             'Elevated Privileges',
+             'Elevated/admin privileges enabled'),
+            
+            # Execute permissions
+            (r'["\'](?:execute|exec|run)["\']?\s*:\s*True',
+             'Execute Permission',
+             'Code execution permission enabled'),
+            
+            # Full access patterns
+            (r'["\'](?:full_access|all_permissions|unrestricted)["\']?\s*:\s*True',
+             'Unrestricted Access',
+             'Unrestricted/full access granted'),
+        ]
+        
+        # Track config blocks
+        in_config = False
+        config_start = 0
+        brace_count = 0
+        config_content = []
+        
+        for line_num, line in enumerate(lines, 1):
+            stripped = line.strip()
+            
+            # Detect start of config function or dict
+            if re.search(r'def\s+config\s*\(|["\']?(?:config|settings|permissions)["\']?\s*[=:]\s*\{', line):
+                in_config = True
+                config_start = line_num
+                brace_count = line.count('{') - line.count('}')
+                config_content = [line]
+                continue
+            
+            if in_config:
+                config_content.append(line)
+                brace_count += line.count('{') - line.count('}')
+                
+                # Check if config block ended
+                if brace_count <= 0 or (stripped.startswith('def ') and line_num > config_start):
+                    in_config = False
+                    full_config = '\n'.join(config_content)
+                    
+                    # Check for dangerous patterns in the config
+                    dangers_found = []
+                    for pattern, danger_type, description in dangerous_config_patterns:
+                        if re.search(pattern, full_config, re.IGNORECASE | re.DOTALL):
+                            dangers_found.append((danger_type, description))
+                    
+                    if dangers_found:
+                        snippet = self.extract_code_snippet(code, config_start, context_lines=5)
+                        
+                        danger_summary = ', '.join([d[0] for d in dangers_found])
+                        
+                        finding = Finding(
+                            detector_name=self.name,
+                            vulnerability_type="Overly Permissive AI Config",
+                            severity="HIGH",
+                            line_number=config_start,
+                            code_snippet=snippet,
+                            description=(
+                                f"Configuration grants dangerous permissions: {danger_summary}. "
+                                f"Details: {'; '.join([d[1] for d in dangers_found])}. "
+                                f"AI agents and tools should follow least privilege principle. "
+                                f"Granting shell access or delete permissions allows attackers "
+                                f"to cause severe damage via prompt injection attacks."
+                            ),
+                            confidence=0.90,
+                            cwe_id="CWE-269",
+                            owasp_category="A01:2021 – Broken Access Control",
+                            metadata={
+                                'detection_type': 'permission_config',
+                                'dangers_found': [d[0] for d in dangers_found],
+                                'config_start_line': config_start
+                            }
+                        )
+                        
+                        findings.append(finding)
+                        logger.info(
+                            f"✓ Detected overly permissive config at {file_name}:{config_start} "
+                            f"({len(dangers_found)} dangerous permissions)"
+                        )
+                    
+                    config_content = []
+            
+            # Also check individual lines for dangerous patterns (outside config blocks)
+            for pattern, danger_type, description in dangerous_config_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    # Avoid duplicate with config block detection
+                    if not in_config:
+                        snippet = self.extract_code_snippet(code, line_num, context_lines=2)
+                        
+                        finding = Finding(
+                            detector_name=self.name,
+                            vulnerability_type="Dangerous Permission Setting",
+                            severity="HIGH",
+                            line_number=line_num,
+                            code_snippet=snippet,
+                            description=(
+                                f"Dangerous permission detected: {danger_type}. {description}. "
+                                f"This setting could allow attackers to abuse the system "
+                                f"through prompt injection or other attacks."
+                            ),
+                            confidence=0.85,
+                            cwe_id="CWE-269",
+                            owasp_category="A01:2021 – Broken Access Control",
+                            metadata={
+                                'detection_type': 'inline_permission',
+                                'danger_type': danger_type
+                            }
+                        )
+                        
+                        findings.append(finding)
+                        logger.info(
+                            f"✓ Detected dangerous permission at {file_name}:{line_num} "
+                            f"({danger_type})"
+                        )
+                        break
         
         return findings
 

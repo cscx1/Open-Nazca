@@ -11,7 +11,7 @@ import tempfile
 import json
 
 # Add parent directory to path to import src modules
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.scanner import AICodeScanner
 from src.ingestion import CodeIngestion
