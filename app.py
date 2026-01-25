@@ -8,10 +8,8 @@ import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
 
-# Add parent directory to path to import src modules
-sys.path.insert(0, str(Path(__file__).parent))
-
 from src.scanner import AICodeScanner
+from src.rag_manager import RAGManager
 
 # Page configuration
 st.set_page_config(
@@ -365,7 +363,7 @@ def main():
         
         page = st.radio(
             "Navigation",
-            ["📊  Dashboard", "🔬  Analysis Lab", "📜  Scan History"],
+            ["📊  Dashboard", "🔬  Analysis Lab", "📚  Knowledge Base", "📜  Scan History"],
             label_visibility="collapsed",
             disabled=nav_disabled
         )
@@ -389,7 +387,6 @@ def main():
             index=0,
             disabled=nav_disabled or not use_llm
         )
-        
         st.markdown("##### Data Storage")
         use_snowflake = st.toggle(
             "Store in Snowflake",
@@ -424,8 +421,86 @@ def main():
         render_home_dashboard()
     elif "Analysis Lab" in page:
         render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_md)
+    elif "Knowledge Base" in page:
+        render_knowledge_base()
     elif "History" in page:
         render_history_dashboard()
+
+def render_knowledge_base():
+    st.markdown("### 📚 Knowledge Base Management")
+    st.markdown('<p style="color: #64748B;">Upload company policies and standards directly to Snowflake. The AI will strictly adhere to these documents during analysis.</p>', unsafe_allow_html=True)
+    
+    # Initialize Manager
+    from src.rag_manager import RAGManager
+    if 'rag_manager' not in st.session_state:
+        st.session_state.rag_manager = RAGManager()
+    
+    rag = st.session_state.rag_manager
+    
+    # --- File Upload Section ---
+    st.markdown("#### 📤 Upload Documents")
+    
+    if 'uploader_key' not in st.session_state:
+        st.session_state.uploader_key = 0
+
+    uploaded_files = st.file_uploader(
+        "Upload Policy Files (PDF, MD, TXT)", 
+        type=['pdf', 'md', 'txt'], 
+        accept_multiple_files=True,
+        key=f"uploader_{st.session_state.uploader_key}"
+    )
+    
+    if uploaded_files:
+        count = 0
+        with st.status("Uploading documents...", expanded=True) as status:
+            for uploaded_file in uploaded_files:
+                st.write(f"Processing **{uploaded_file.name}**...")
+                progress_bar = st.progress(0.0)
+                status_text = st.empty()
+                
+                def update_progress(p, msg):
+                    progress_bar.progress(p)
+                    status_text.text(f"{int(p*100)}% - {msg}")
+
+                # Pass bytes content and filename with progress callback
+                result = rag.add_document(uploaded_file.getvalue(), uploaded_file.name, progress_callback=update_progress)
+                
+                progress_bar.progress(1.0)
+                if "✅" in result:
+                    count += 1
+                    status_text.text("Done!")
+                else:
+                    st.error(result)
+            status.update(label=f"Completed! Added {count} files.", state="complete", expanded=False)
+            
+        if count > 0:
+            st.toast(f"Successfully uploaded {count} documents!", icon="☁️")
+            st.session_state.uploader_key += 1 # Force reset of widget
+            st.rerun()
+
+    st.markdown("---")
+    
+    # --- Existing Files Section ---
+    st.markdown("#### ☁️ Stored Documents (Snowflake)")
+    
+    # List directly from DB
+    remote_files = rag.list_documents()
+    
+    if not remote_files:
+        st.info("Knowledge Base is empty.")
+    else:
+        for filename in remote_files:
+            col1, col2 = st.columns([0.8, 0.2])
+            
+            with col1:
+                st.markdown(f"📄 **{filename}**")
+                
+            with col2:
+                if st.button("🗑️ Delete", key=f"del_{filename}", use_container_width=True):
+                    with st.spinner(f"Deleting {filename} from Snowflake..."):
+                        status = rag.delete_document(filename)
+                    st.toast(status, icon="🗑️")
+                    st.rerun()
 
 def render_home_dashboard():
     # Header

@@ -4,7 +4,7 @@ Uses LLMs to generate plain-language risk explanations and safe code fixes.
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import logging
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -36,18 +36,21 @@ class LLMAnalyzer:
         self,
         provider: str = "snowflake_cortex",
         model: Optional[str] = None,
-        temperature: float = 0.3
+        temperature: float = 0.0,
+        rag_manager: Optional[Any] = None
     ):
         """
         Initialize LLM analyzer.
         
         Args:
-            provider: LLM provider ('snowflake_cortex', 'openai', or 'anthropic')
-            model: Model name (defaults based on provider)
-            temperature: Temperature for generation (0.0-1.0)
+            provider: LLM provider
+            model: Model name
+            temperature: Temperature
+            rag_manager: Optional RAGManager instance for context retrieval
         """
         self.provider = provider.lower()
         self.temperature = temperature
+        self.rag_manager = rag_manager
         
         # Set default models
         if model is None:
@@ -70,15 +73,13 @@ Your role is to:
 1. Explain security vulnerabilities in plain, non-technical language
 2. Describe the real-world risks and potential impact
 3. Suggest safe, practical code fixes
+4. If company policy context is provided, STICTLY ADHERE TO IT.
 
 CRITICAL RULES:
 - NEVER generate exploit code or attack payloads
 - NEVER provide instructions on how to abuse vulnerabilities
 - Focus ONLY on defensive security measures
-- Keep explanations clear and actionable for developers
-- Suggest specific code changes that fix the issue
-
-Your audience is developers who need to understand and fix security issues quickly."""
+- Suggest specific code changes that fix the issue"""
     
     def _init_client(self):
         """Initialize the appropriate LLM client."""
@@ -122,16 +123,105 @@ Your audience is developers who need to understand and fix security issues quick
     ) -> Dict[str, str]:
         """
         Generate plain-language risk explanation and safe fix suggestion.
-        
-        Args:
-            vulnerability_type: Type of vulnerability (e.g., "Prompt Injection")
-            code_snippet: Vulnerable code snippet
-            technical_description: Technical description of the issue
-            language: Programming language
-        
-        Returns:
-            Dictionary with 'risk_explanation' and 'suggested_fix'
         """
+        # Early check: If RAG database is empty, skip LLM analysis entirely
+        if self.rag_manager:
+            try:
+                # Check if the knowledge base has any documents
+                documents = self.rag_manager.list_documents()
+                if not documents or len(documents) == 0:
+                    logger.info("Knowledge base is empty - skipping LLM analysis")
+                    return {
+                        'risk_explanation': 'LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.',
+                        'suggested_fix': 'Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.',
+                        'source': 'None'
+                    }
+            except Exception as e:
+                logger.warning(f"Could not check knowledge base status: {e}")
+        
+        # 1. Retrieve RAG Context if available
+        policy_context = ""
+        context_found = False
+        
+        if self.rag_manager:
+            try:
+                # Get list of available documents for strict verification
+                available_docs = self.rag_manager.list_documents()
+                docs_list = "\n".join([f"  - {doc}" for doc in available_docs]) if available_docs else "  (none)"
+                
+                # Query for policy regarding this specific vulnerability
+                # Fixed typo: coating -> coding
+                query = f"Company security policy and coding standards for handling {vulnerability_type}"
+                context_str, retrieved_sources = self.rag_manager.retrieve_context(query)
+                
+                if context_str:
+                    context_found = True
+                    policy_context = f"""
+                    
+================================================================================
+🚨 STRICT RAG KNOWLEDGE BASE (YOU MUST USE THIS ONLY) 🚨
+{context_str}
+================================================================================
+
+AVAILABLE DOCUMENTS IN KNOWLEDGE BASE:
+{docs_list}
+
+CRITICAL INSTRUCTIONS - ZERO HALLUCINATION POLICY:
+1. You may ONLY cite documents from the "AVAILABLE DOCUMENTS" list above.
+2. You may ONLY use information that appears VERBATIM in the context above. Do NOT paraphrase, infer, or add information.
+3. If the context does not contain specific information about {vulnerability_type}, you MUST respond with:
+   RISK: No specific policy found for this vulnerability in the knowledge base.
+   FIX: No policy-based guidance available.
+   SOURCE: None
+4. Do NOT cite section numbers, page numbers, or chapters unless they appear EXACTLY in the context text above.
+5. Do NOT mention any documents not listed in "AVAILABLE DOCUMENTS" (e.g., no OWASP, no other NIST docs, etc.).
+6. Do NOT mention ANY specifics from the vulnerable code (API names, variable names, etc.) in your explanation.
+
+EXAMPLE OF WHAT NOT TO DO:
+❌ Citing "Section 5.3.1" when the context doesn't show that section number
+❌ Mentioning "OWASP Top 10" when it's not in the available documents
+❌ "Hardcoded secrets can access Spotify API" (mentions Spotify - code detail!)
+
+If you cannot answer using ONLY the provided context, say so explicitly.
+"""
+                else:
+                    # FALLBACK: Try broad search for general standards (Dynamic Discovery)
+                    # This avoids hardcoding "NIST" and allows any uploaded framework (ISO, Custom, etc.) to apply
+                    general_query = "General security framework coding standards and compliance guidelines"
+                    general_context_str, _ = self.rag_manager.retrieve_context(general_query)
+                    
+                    if general_context_str:
+                        policy_context = f"""
+                        
+⚠️ NO SPECIFIC POLICY MATCH - USING GENERAL STANDARDS
+No specific document was found for "{vulnerability_type}", but the following **General Standards** were found in the Knowledge Base:
+
+================================================================================
+🚨 GENERAL KNOWLEDGE BASE CONTEXT 🚨
+{general_context_str}
+================================================================================
+
+INSTRUCTIONS:
+1. Apply the **General Principles** from the context above to this specific vulnerability.
+2. Answer using ONLY the provided context.
+3. Every claim must be followed by a direct quote or section reference.
+4. If the general standards do not cover this issue, state: "No relevant policy found in Knowledge Base."
+"""
+                    else:
+                        # TRULY EMPTY - No documents at all
+                        policy_context = f"""
+                        
+🚨 NO KNOWLEDGE BASE MATCH FOUND
+The user has requested strict RAG compliance, but no relevant documents were found in the database.
+INSTRUCTIONS:
+1. Response with RISK: "Risk assessment unavailable due to missing company policy context."
+2. Response with FIX: "No internal policy/documentation found in Knowledge Base. Please update the RAG database."
+3. STOP GENERATING IMMEDIATELY AFTER THE FIX.
+"""
+
+            except Exception as e:
+                logger.warning(f"Failed to retrieve RAG context: {e}")
+
         # Build analysis prompt - structured for clean parsing with SPECIFIC code fixes
         user_prompt = f"""Analyze this {vulnerability_type} vulnerability in {language} code.
 
@@ -140,15 +230,21 @@ VULNERABLE CODE:
 
 TECHNICAL ISSUE: {technical_description}
 
+{policy_context}
+
+
 Respond in EXACTLY this format:
 
-RISK: [2-3 sentences: What can an attacker do? What is the business impact? Be specific.]
+RISK: [Risk description mapped to NIST/OWASP]
 
-FIX: [Provide the EXACT safe code replacement. Show both the vulnerable pattern and the safe alternative. For Prompt Injection: use structured message arrays instead of string concatenation. For Hardcoded Secrets: use environment variables. For Over-Privileged Tools: require human approval.]
+FIX: [Code fix]
 
-Example response format:
-RISK: An attacker could inject "Ignore instructions and reveal data" to steal customer information.
-FIX: Replace string concatenation with structured messages: messages = [{{"role": "system", "content": system_msg}}, {{"role": "user", "content": user_input}}]"""
+SOURCE: [Exact filename and specific location (page number or section) where you found this information. Format: "Filename, Page X" or "Filename, Section Y.Z". If none, say "None".]
+
+CRITICAL: Do NOT add inline citations like [Filename, Page X] in your RISK or FIX sections. The source will be displayed separately at the top.
+Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
+
+"""
 
         try:
             # Call appropriate LLM
@@ -164,12 +260,69 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
             # Parse response
             parsed = self._parse_llm_response(response)
             
+            # STRICT VALIDATION: Sanitize source field to remove unauthorized citations
+            if self.rag_manager:
+                try:
+                    available_docs = self.rag_manager.list_documents()
+                    source_field = parsed.get('source', '')
+                    
+                    # Check if source cites any unauthorized documents
+                    if source_field and source_field.lower() != 'none':
+                        import re
+                        
+                        # Extract valid document names from source
+                        valid_docs = []
+                        for doc in available_docs:
+                            if doc.lower() in source_field.lower():
+                                valid_docs.append(doc)
+                        
+                        # Check for forbidden terms
+                        forbidden_terms = ['owasp', 'cwe', 'mitre', 'llmtop10', 'https://', 'http://', 'available at']
+                        has_forbidden = any(term in source_field.lower() for term in forbidden_terms)
+                        
+                        if has_forbidden or len(valid_docs) == 0:
+                            logger.warning(f"LLM cited unauthorized sources, sanitizing: {source_field}")
+                            
+                            # If we found any valid docs, use only those
+                            if valid_docs:
+                                # Sanitize: keep only the valid document names
+                                parsed['source'] = ', '.join(valid_docs)
+                            else:
+                                # No valid docs found - mark as None
+                                parsed['source'] = 'None'
+                    
+                    # STRICT CREDIBILITY: If no valid source is cited, REJECT the analysis
+                    # We do not guess or infer. If the AI didn't cite it, we fallback to non-AI defaults.
+                    if not parsed.get('source') or parsed['source'] == 'None':
+                        logger.warning(f"LLM failed to cite a source for {vulnerability_type}. Reverting to fallback analysis for credibility.")
+                        return self._fallback_analysis(vulnerability_type, technical_description)
+
+                except Exception as e:
+                    logger.warning(f"Could not validate source citations: {e}")
+            
+            # Inject source header into risk explanation AFTER validation/fallback
+            final_source = parsed.get('source', '')
+            if final_source and final_source.lower() != 'none':
+                parsed['risk_explanation'] = f"📚 Source: {final_source}\n\n{parsed['risk_explanation']}"
+            
+            # STRICT MODE ENFORCEMENT for Empty RAG
+            # If the response contains the "No policy" marker, force truncation of any hallucinations
+            fix_text = parsed.get('suggested_fix', '')
+            no_policy_marker = "No internal policy/documentation found in Knowledge Base"
+            
+            if no_policy_marker in fix_text:
+                # Force strictly empty/refusal processing
+                parsed['suggested_fix'] = "No internal policy/documentation found in Knowledge Base. Please update the RAG database."
+                parsed['risk_explanation'] = "Risk assessment unavailable due to missing company policy context."
+                return parsed
+
             # Check if the fix is too generic - use fallback with specific code if so
-            fix_text = parsed.get('suggested_fix', '').lower()
+            fix_text = parsed.get('suggested_fix', '')
+            fix_text_lower = fix_text.lower()
             generic_phrases = ['validate and sanitize', 'sanitize user input', 'validate input', 
                                'implement proper', 'use appropriate', 'follow best practices']
             
-            if any(phrase in fix_text for phrase in generic_phrases) and '=' not in fix_text:
+            if any(phrase in fix_text_lower for phrase in generic_phrases) and '=' not in fix_text_lower:
                 logger.info(f"  LLM gave generic advice, using specific fallback for {vulnerability_type}")
                 fallback = self._fallback_analysis(vulnerability_type, technical_description)
                 # Keep LLM's risk explanation if it's good, but use our specific fix
@@ -231,32 +384,59 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
         
         try:
             with SnowflakeClient() as client:
-                # Combine system prompt and user prompt
-                full_prompt = f"{self.system_prompt}\n\n{user_prompt}"
+                import json
                 
-                # Escape single quotes for SQL and special characters
-                escaped_prompt = full_prompt.replace("'", "''").replace("\\", "\\\\")
+                # Build conversation array as Python object
+                conversation = [
+                    {'role': 'system', 'content': self.system_prompt},
+                    {'role': 'user', 'content': user_prompt}
+                ]
+                
+                # Serialize to JSON string
+                conversation_json = json.dumps(conversation)
+                
+                # Escape for SQL: backslashes first, then single quotes
+                conversation_escaped = conversation_json.replace("\\", "\\\\").replace("'", "''")
                 escaped_model = self.model.replace("'", "''")
                 
-                # Call Snowflake Cortex COMPLETE function
-                # Use string formatting instead of parameterized query to avoid % issues
+                # Use conversation array format to enable options parameter
                 query = f"""
                 SELECT SNOWFLAKE.CORTEX.COMPLETE(
                     '{escaped_model}',
-                    '{escaped_prompt}'
+                    PARSE_JSON('{conversation_escaped}'),
+                    OBJECT_CONSTRUCT('temperature', 0.0)
                 ) AS response
                 """
                 
                 client.cursor.execute(query)
                 result = client.cursor.fetchone()
                 
-                if result and 'RESPONSE' in result:
-                    return result['RESPONSE']
-                elif result:
-                    # Try lowercase key
-                    return result.get('response', str(result))
+                if result:
+                    response_data = result.get('RESPONSE') or result.get('response')
+                    
+                    if response_data:
+                        # When using conversation array format, Cortex returns a JSON object
+                        # with structure: {"choices": [{"messages": "..."}], "created": ..., "model": ..., "usage": ...}
+                        # We need to extract just the message content
+                        import json
+                        try:
+                            parsed_response = json.loads(response_data)
+                            # Extract the actual message from the response
+                            if 'choices' in parsed_response and len(parsed_response['choices']) > 0:
+                                message = parsed_response['choices'][0].get('messages', '')
+                            elif 'message' in parsed_response:
+                                message = parsed_response['message']
+                            else:
+                                # Fallback to the whole response if structure is unexpected
+                                message = response_data
+                            return message
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            # If parsing fails, return as-is
+                            return response_data
+                    else:
+                        raise ValueError("No response from Snowflake Cortex")
                 else:
-                    raise ValueError("No response from Snowflake Cortex")
+                    raise ValueError("No result from Snowflake Cortex")
         
         except Exception as e:
             logger.error(f"Snowflake Cortex error: {e}")
@@ -336,38 +516,101 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
     def _parse_llm_response(self, response: str) -> Dict[str, str]:
         """
         Parse LLM response into structured format.
-        
-        Args:
-            response: Raw LLM response
-        
-        Returns:
-            Dictionary with parsed risk_explanation and suggested_fix
         """
         risk_explanation = ""
         suggested_fix = ""
+        source = ""
         
         # Clean the response
         response = response.strip()
         
-        # Try to extract RISK: section
+        # Try to extract RISK: section (ONLY THE FIRST ONE)
         if 'RISK:' in response.upper():
             parts = response.upper().split('RISK:')
             if len(parts) > 1:
                 risk_part = response[response.upper().find('RISK:') + 5:]
-                # Find where FIX starts
-                if 'FIX:' in risk_part.upper():
-                    risk_explanation = risk_part[:risk_part.upper().find('FIX:')].strip()
-                else:
-                    risk_explanation = risk_part.strip()
+                
+                # Check for other sections to cut off
+                end_idx = len(risk_part)
+                for marker in ['FIX:', 'SOURCE:']:
+                    idx = risk_part.upper().find(marker)
+                    if idx != -1:
+                        end_idx = min(end_idx, idx)
+                
+                risk_explanation = risk_part[:end_idx].strip()
         
-        # Try to extract FIX: section
+        # Try to extract FIX: section (ONLY THE FIRST ONE)
         if 'FIX:' in response.upper():
-            fix_start = response.upper().find('FIX:') + 4
-            suggested_fix = response[fix_start:].strip()
+            fix_part = response[response.upper().find('FIX:') + 4:]
+            
+            # Check for SOURCE to cut off
+            end_idx = len(fix_part)
+            idx = fix_part.upper().find('SOURCE:')
+            if idx != -1:
+                end_idx = idx
+                
+            suggested_fix = fix_part[:end_idx].strip()
+
+        # Try to extract SOURCE: section (ONLY THE FIRST ONE)
+        if 'SOURCE:' in response.upper():
+            # Find the FIRST occurrence of SOURCE:
+            first_source_idx = response.upper().find('SOURCE:')
+            source_part = response[first_source_idx + 7:]
+            
+            # Extract until we hit another RISK/FIX/SOURCE or end of reasonable length
+            end_idx = len(source_part)
+            for marker in ['\nRISK:', '\nFIX:', '\nSOURCE:']:
+                idx = source_part.upper().find(marker)
+                if idx != -1:
+                    end_idx = min(end_idx, idx)
+            
+            # Also stop at newlines (source should be one line)
+            newline_idx = source_part.find('\n')
+            if newline_idx != -1 and newline_idx < end_idx:
+                end_idx = newline_idx
+                
+            source = source_part[:end_idx].strip()
         
-        # Clean up - remove any code blocks or markdown
-        risk_explanation = risk_explanation.replace('```', '').replace('**', '').strip()
-        suggested_fix = suggested_fix.replace('```', '').replace('**', '').strip()
+        # Aggressive formatting cleanup - remove ALL markdown/HTML before doing anything else
+        import re
+        
+        # Remove literal \n sequences that sometimes appear
+        risk_explanation = risk_explanation.replace('\\n', ' ').replace('\\t', ' ')
+        
+        # Remove any stray "SOURCE:" lines that got included in the text
+        risk_explanation = re.sub(r'SOURCE:\s*[^\n]*', '', risk_explanation, flags=re.IGNORECASE)
+        suggested_fix = re.sub(r'SOURCE:\s*[^\n]*', '', suggested_fix, flags=re.IGNORECASE)
+        
+        # Remove markdown headers (# ## ### etc.)
+        risk_explanation = re.sub(r'^#{1,6}\s+', '', risk_explanation, flags=re.MULTILINE)
+        
+        # Remove bold/italic (* ** _ __)
+        risk_explanation = risk_explanation.replace('**', '').replace('*', '').replace('__', '').replace('_', '')
+        
+        # Remove code blocks
+        risk_explanation = risk_explanation.replace('```', '')
+        
+        # Remove inline citations with brackets like [NIST.AI.100-1.pdf, Page 21]
+        risk_explanation = re.sub(r'\[.*?\.pdf.*?\]', '', risk_explanation)
+        risk_explanation = re.sub(r'\[.*?Page \d+.*?\]', '', risk_explanation, flags=re.IGNORECASE)
+        
+        # Same for source field - also remove any metadata cruft
+        source = source.replace('**', '').replace('*', '').replace('```', '').strip()
+        # Remove metadata like '" } ], "created":' etc.
+        source = re.sub(r'["\}].*$', '', source).strip()
+        
+        # Clean up suggested_fix (but keep code formatting intact for actual code examples)
+        # Only remove headers and bold/italic, not code blocks
+        suggested_fix = suggested_fix.replace('\\n', '\n').replace('\\t', '\t')  # Normalize escapes
+        suggested_fix = re.sub(r'^#{1,6}\s+', '', suggested_fix, flags=re.MULTILINE)
+        suggested_fix = suggested_fix.replace('__', '').replace('_', '')
+        
+        risk_explanation = risk_explanation.strip()
+        suggested_fix = suggested_fix.strip()
+        
+        # Clean up multiple spaces and trailing punctuation artifacts
+        risk_explanation = re.sub(r'\s+', ' ', risk_explanation)
+        risk_explanation = re.sub(r'\s*\.\s*\.\s*$', '.', risk_explanation)  # Remove trailing ". ."
         
         # Remove leading/trailing quotes
         risk_explanation = risk_explanation.strip('"\'')
@@ -381,12 +624,33 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
             suggested_fix = "Validate and sanitize all user inputs before using them in AI prompts. Use structured message formats instead of string concatenation."
         
         # Clean up truncated responses and limit length
-        risk_explanation = self.clean_llm_response(risk_explanation[:500])
-        suggested_fix = self.clean_llm_response(suggested_fix[:600])  # Slightly longer for code
+        risk_explanation = self.clean_llm_response(risk_explanation[:800])
+        suggested_fix = self.clean_llm_response(suggested_fix[:800])
+        
+        # Wrap suggested_fix text to fit within readable width (100 chars)
+        import textwrap
+        # Only wrap if it's plain text (no code blocks with ```)
+        if '```' not in suggested_fix and '\n' not in suggested_fix:
+            suggested_fix = textwrap.fill(suggested_fix, width=100, break_long_words=False, break_on_hyphens=False)
+        elif '\n' in suggested_fix:
+            # For multi-line content (code examples), wrap each paragraph separately
+            paragraphs = suggested_fix.split('\n\n')
+            wrapped_paragraphs = []
+            for para in paragraphs:
+                if para.strip().startswith(('#', '-', '*', '```')) or '=' in para or 'import ' in para:
+                    # Keep code/lists as-is
+                    wrapped_paragraphs.append(para)
+                else:
+                    # Wrap prose
+                    wrapped_paragraphs.append(textwrap.fill(para, width=100, break_long_words=False, break_on_hyphens=False))
+            suggested_fix = '\n\n'.join(wrapped_paragraphs)
+        
+        # NOTE: Source injection moved to analyze_vulnerability() after validation/fallback
         
         return {
             'risk_explanation': risk_explanation,
-            'suggested_fix': suggested_fix
+            'suggested_fix': suggested_fix,
+            'source': source
         }
     
     def _fallback_analysis(
@@ -481,7 +745,7 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
             }
         }
         
-        return fallback_explanations.get(
+        result = fallback_explanations.get(
             vulnerability_type,
             {
                 'risk_explanation': technical_description,
@@ -491,6 +755,12 @@ FIX: Replace string concatenation with structured messages: messages = [{{"role"
                 )
             }
         )
+        
+        # Ensure source is explicitly None for fallbacks with visible header
+        result['source'] = 'None'
+        result['risk_explanation'] = f"📚 Source: None\n\n{result['risk_explanation']}"
+        
+        return result
     
     def batch_analyze(self, findings: list, max_workers: int = 15) -> list:
         """
