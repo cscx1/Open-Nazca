@@ -439,10 +439,15 @@ def render_knowledge_base():
     
     # --- File Upload Section ---
     st.markdown("#### 📤 Upload Documents")
+    
+    if 'uploader_key' not in st.session_state:
+        st.session_state.uploader_key = 0
+
     uploaded_files = st.file_uploader(
         "Upload Policy Files (PDF, MD, TXT)", 
         type=['pdf', 'md', 'txt'], 
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        key=f"uploader_{st.session_state.uploader_key}"
     )
     
     if uploaded_files:
@@ -470,6 +475,7 @@ def render_knowledge_base():
             
         if count > 0:
             st.toast(f"Successfully uploaded {count} documents!", icon="☁️")
+            st.session_state.uploader_key += 1 # Force reset of widget
             st.rerun()
 
     st.markdown("---")

@@ -145,10 +145,10 @@ CRITICAL RULES:
 ================================================================================
 
 INSTRUCTIONS FOR FIX GENERATION:
-1. You must ONLY use the information from the above Knowledge Base to generate the fix.
-2. If the Knowledge Base does not contain specific coding guidelines for {vulnerability_type}, you MUST state: "No internal policy found for this vulnerability."
+1. Answer using ONLY the provided context. If the answer is not present, state that you do not know.
+2. Every claim must be followed by a direct quote or section reference from the PDF (e.g., [SOURCE_FILE, Section X.Y]).
 3. Do NOT use outside training data or generic best practices.
-4. CITE the exact policy document name (SOURCE_FILE) that dictates the fix.
+4. If the Knowledge Base does not contain specific coding guidelines for {vulnerability_type}, you MUST state: "No internal policy found for this vulnerability."
 """
                 else:
                     # FALLBACK: Try broad search for general standards (Dynamic Discovery)
@@ -169,8 +169,9 @@ No specific document was found for "{vulnerability_type}", but the following **G
 
 INSTRUCTIONS:
 1. Apply the **General Principles** from the context above to this specific vulnerability.
-2. CITE the source document you are using (e.g., "According to [Filename]...").
-3. If the general standards do not cover this issue, state: "No relevant policy found in Knowledge Base."
+2. Answer using ONLY the provided context.
+3. Every claim must be followed by a direct quote or section reference (e.g., "According to [Filename] Section X...").
+4. If the general standards do not cover this issue, state: "No relevant policy found in Knowledge Base."
 """
                     else:
                         # TRULY EMPTY - No documents at all
@@ -307,9 +308,10 @@ SOURCE: [Exact filename of the policy document used. If using General Standards,
                 # Escape single quotes for SQL and special characters
                 escaped_prompt = full_prompt.replace("'", "''").replace("\\", "\\\\")
                 escaped_model = self.model.replace("'", "''")
-                
+
                 # Call Snowflake Cortex COMPLETE function
                 # Use string formatting instead of parameterized query to avoid % issues
+                # Reverting to 2-arg signature due to SQL compilation errors with options object
                 query = f"""
                 SELECT SNOWFLAKE.CORTEX.COMPLETE(
                     '{escaped_model}',
