@@ -350,7 +350,7 @@ def main():
         # Logo Area
         st.markdown("""
         <div class="sidebar-logo-container">
-            <h1 style="color: #F43F5E; font-size: 26px; font-weight: 800; letter-spacing: -1px;">LLM<span style="color: #ffffff;">CHECK</span></h1>
+            <h1 style="color: #F43F5E; font-size: 26px; font-weight: 800; letter-spacing: -1px;">DLLM<span style="color: #ffffff;">Checkmate</span></h1>
             <p style="color: #64748B; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;">Security Analytics</p>
         </div>
         """, unsafe_allow_html=True)
