@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Security Scan Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .scan-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .summary-card .count {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .critical { color: #dc3545; }
+        .high { color: #fd7e14; }
+        .medium { color: #ffc107; }
+        .low { color: #0dcaf0; }
+        .finding {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .finding.critical { border-left-color: #dc3545; }
+        .finding.high { border-left-color: #fd7e14; }
+        .finding.medium { border-left-color: #ffc107; }
+        .finding.low { border-left-color: #0dcaf0; }
+        .finding h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .finding .severity-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 15px;
+        }
+        .finding .code-snippet {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+        }
+        .finding .section {
+            margin: 15px 0;
+        }
+        .finding .section-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔒 AI Code Security Scan Report</h1>
+        <p>Automated vulnerability detection for AI systems</p>
+    </div>
+
+    <div class="scan-info">
+        <h2>Scan Information</h2>
+        <p><strong>File:</strong> CodeTester.py</p>
+        <p><strong>Language:</strong> python</p>
+        <p><strong>Scan Time:</strong> 2026-01-25 11:19:23</p>
+        <p><strong>Scan ID:</strong> local-1769357963</p>
+    </div>
+
+    <h2>Summary</h2>
+    <div class="summary">
+        <div class="summary-card">
+            <h3>Critical</h3>
+            <div class="count critical">2</div>
+        </div>
+        <div class="summary-card">
+            <h3>High</h3>
+            <div class="count high">4</div>
+        </div>
+        <div class="summary-card">
+            <h3>Medium</h3>
+            <div class="count medium">2</div>
+        </div>
+        <div class="summary-card">
+            <h3>Low</h3>
+            <div class="count low">0</div>
+        </div>
+    </div>
+
+    <h2>Detailed Findings</h2>
+
+    <div class="finding critical">
+        <h3>Hardcoded Secret</h3>
+        <span class="severity-badge" style="background-color: #dc3545;">
+            CRITICAL
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 93</strong> in function <code>main</code><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Hardcoded client ID detected: Client ID appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: 80f5...486c
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 91   | def main():
+ 92   |     #Fake API Keys
+ 93 → |     CLIENT_ID = '80f5...486c'  
+ 94   |     CLIENT_SECRET = '7dd34e6977b44b7185344474'  
+ 95   |     
+ 96   |     try:</pre></div>
+        </div>
+    </div>
+
+    <div class="finding critical">
+        <h3>Hardcoded Secret</h3>
+        <span class="severity-badge" style="background-color: #dc3545;">
+            CRITICAL
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 94</strong><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Hardcoded client secret detected: Client Secret appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: 7dd3...4474
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 92   |     #Fake API Keys
+ 93   |     CLIENT_ID = '80f51630c7514a33ac25646644486c'  
+ 94 → |     CLIENT_SECRET = '7dd3...4474'  
+ 95   |     
+ 96   |     try:
+ 97   |         spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)</pre></div>
+        </div>
+    </div>
+
+    <div class="finding medium">
+        <h3>Potential Hardcoded Secret</h3>
+        <span class="severity-badge" style="background-color: #ffc107;">
+            MEDIUM
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 31</strong> in function <code>get_access_token</code><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 60%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Potential secret detected: variable name contains 'token' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 29   |     
+ 30   |     def get_access_token(self):
+ 31 → |         url = "https://accounts.spotify.com/api/token"
+ 32   |         payload = {'grant_type': 'client_credentials'}
+ 33   |         headers = {
+ 34   |             'Authorization': f'Basic {self._encode_credentials()}',</pre></div>
+        </div>
+    </div>
+
+    <div class="finding medium">
+        <h3>Potential Hardcoded Secret</h3>
+        <span class="severity-badge" style="background-color: #ffc107;">
+            MEDIUM
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 94</strong><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 60%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Potential secret detected: variable name contains 'secret' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 92   |     #Fake API Keys
+ 93   |     CLIENT_ID = '80f51630c7514a33ac25646644486c'  
+ 94 → |     CLIENT_SECRET = '7dd34e6977b44b7185344474'  
+ 95   |     
+ 96   |     try:
+ 97   |         spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)</pre></div>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Secret Exposed in Logs</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 43</strong> in function <code>_encode_credentials</code><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 85%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Secret or sensitive value appears to be printed/logged. This exposes credentials in console output, log files, and potentially monitoring systems. Attackers with access to logs can extract these secrets. Never print API keys, passwords, or tokens to output.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 41   |             return response_data.get('access_token')
+ 42   |         except requests.RequestException as e:
+ 43 → |             print(f"Error obtaining access token: {e}")
+ 44   |             return None
+ 45   |     
+ 46   |     def _encode_credentials(self):</pre></div>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Secret Exposed in Logs</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 108</strong><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 85%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Secret or sensitive value appears to be printed/logged. This exposes credentials in console output, log files, and potentially monitoring systems. Attackers with access to logs can extract these secrets. Never print API keys, passwords, or tokens to output.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>106   |         artists_input = input("Enter your favorite artists (comma-separated): ")
+107   | 
+108 → |         print(f"Using API key: {CLIENT_ID}") 
+109   | 
+110   |         request_metadata = {
+111   |         "auth": CLIENT_ID,</pre></div>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Dangerous Secret Aggregation</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 139</strong> in function <code>collect_sensitive_values</code><br>
+            Detector: HardcodedSecretsDetector | 
+            Confidence: 80%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Function 'collect_sensitive_values' appears to aggregate multiple secrets or sensitive values. This pattern is commonly used for data exfiltration - collecting credentials into a single payload for theft. Functions should not combine multiple secrets. Each secret should be handled separately with minimal exposure.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>134   |         print(f"An unexpected error occurred: {e}")
+135   | 
+136   | if __name__ == "__main__":
+137   |     main()
+138   | 
+139 → | def collect_sensitive_values(CLIENT_ID, CLIENT_SECRET, token):
+140   | 
+141   |     stash = []
+142   |     stash.append(CLIENT_ID)
+143   |     stash.append(CLIENT_SECRET)
+144   |     stash.append(token)
+145   | </pre></div>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Overly Permissive AI Config</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 17</strong> in function <code>config</code><br>
+            Detector: OverprivilegedToolsDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Configuration grants dangerous permissions: Shell Access, Delete Permission, Write+Delete Permissions. Details: Shell access enabled - allows arbitrary command execution; Delete permission granted - allows file/data destruction; Both write and delete permissions - high risk for data loss. AI agents and tools should follow least privilege principle. Granting shell access or delete permissions allows attackers to cause severe damage via prompt injection attacks.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre> 12   | import unittest
+ 13   | from unittest.mock import patch
+ 14   | import requests
+ 15   | 
+ 16   | class SpotifyAPI:
+ 17 → |     def config():
+ 18   |         return {
+ 19   |             "tools": {
+ 20   |                 "filesystem": ["read", "write", "delete"],
+ 21   |                 "shell": True
+ 22   |             }
+ 23   |         }</pre></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Generated by AI Code Breaker: LLM Security Scanner</p>
+        <p>Review all findings and implement suggested fixes to improve security</p>
+    </div>
+</body>
+</html>

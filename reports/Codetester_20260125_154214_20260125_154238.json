@@ -1,0 +1,190 @@
+{
+  "scan_info": {
+    "scan_id": "7eb69a3c-d867-4105-b4dd-3742a5e37206",
+    "file_name": "Codetester_20260125_154214.py",
+    "language": "python",
+    "scan_timestamp": "2026-01-25 15:42:38",
+    "total_findings": 7
+  },
+  "summary": {
+    "total": 7,
+    "by_severity": {
+      "CRITICAL": 2,
+      "LOW": 1,
+      "HIGH": 4
+    },
+    "by_type": {
+      "Hardcoded Secret": 2,
+      "Potential Threat - URL with Secret Keyword": 1,
+      "Secret Exposed in Logs": 2,
+      "Dangerous Secret Aggregation": 1,
+      "Overly Permissive AI Config": 1
+    }
+  },
+  "findings": [
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Hardcoded Secret",
+      "severity": "CRITICAL",
+      "line_number": 93,
+      "code_snippet": " 91   | def main():\n 92   |     #Fake API Keys\n 93 \u2192 |     CLIENT_ID = '80f5...486c'  \n 94   |     CLIENT_SECRET = '7dd34e6977b44b7185344474'  \n 95   |     \n 96   |     try:",
+      "description": "Hardcoded client ID detected: Client ID appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: 80f5...486c",
+      "confidence": 0.9,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "secret_type": "Client ID",
+        "masked_value": "80f5...486c",
+        "pattern_matched": "CLIENT[_-]?ID\\s*=\\s*[\"\\']([A-Za-z0-9_\\-]{20,})[\"\\']",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+          "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+      "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey"
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Hardcoded Secret",
+      "severity": "CRITICAL",
+      "line_number": 94,
+      "code_snippet": " 92   |     #Fake API Keys\n 93   |     CLIENT_ID = '80f51630c7514a33ac25646644486c'  \n 94 \u2192 |     CLIENT_SECRET = '7dd3...4474'  \n 95   |     \n 96   |     try:\n 97   |         spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)",
+      "description": "Hardcoded client secret detected: Client Secret appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: 7dd3...4474",
+      "confidence": 0.9,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "secret_type": "Client Secret",
+        "masked_value": "7dd3...4474",
+        "pattern_matched": "CLIENT[_-]?SECRET\\s*=\\s*[\"\\']([A-Za-z0-9_\\-]{16,})[\"\\']",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+          "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+      "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey"
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Threat - URL with Secret Keyword",
+      "severity": "LOW",
+      "line_number": 31,
+      "code_snippet": " 29   |     \n 30   |     def get_access_token(self):\n 31 \u2192 |         url = \"https://accounts.spotify.com/api/token\"\n 32   |         payload = {'grant_type': 'client_credentials'}\n 33   |         headers = {\n 34   |             'Authorization': f'Basic {self._encode_credentials()}',",
+      "description": "URL contains secret-related keyword 'token'. This is likely a public API endpoint, but review to ensure no sensitive parameters or credentials are embedded in the URL.",
+      "confidence": 0.3,
+      "cwe_id": "CWE-598",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "url_with_keyword",
+        "keyword": "token",
+        "is_url": true,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf, Informative References\n\nThe URL in the code contains a keyword 'token' which might be an indicator of sensitive information. This could potentially expose sensitive data if the URL is accessed by unauthorized parties.",
+          "suggested_fix": "Review the URL to ensure no sensitive parameters or credentials are embedded in it. If there are,\nthey should be removed and handled securely in the code, not as part of the URL.",
+          "source": "NIST.SP.800-218A.pdf, Informative References"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf, Informative References\n\nThe URL in the code contains a keyword 'token' which might be an indicator of sensitive information. This could potentially expose sensitive data if the URL is accessed by unauthorized parties.",
+      "suggested_fix": "Review the URL to ensure no sensitive parameters or credentials are embedded in it. If there are,\nthey should be removed and handled securely in the code, not as part of the URL."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Secret Exposed in Logs",
+      "severity": "HIGH",
+      "line_number": 43,
+      "code_snippet": " 41   |             return response_data.get('access_token')\n 42   |         except requests.RequestException as e:\n 43 \u2192 |             print(f\"Error obtaining access token: {e}\")\n 44   |             return None\n 45   |     \n 46   |     def _encode_credentials(self):",
+      "description": "Secret or sensitive value appears to be printed/logged. This exposes credentials in console output, log files, and potentially monitoring systems. Attackers with access to logs can extract these secrets. Never print API keys, passwords, or tokens to output.",
+      "confidence": 0.85,
+      "cwe_id": "CWE-532",
+      "owasp_category": "A09:2021 \u2013 Security Logging and Monitoring Failures",
+      "metadata": {
+        "detection_type": "printed_secret",
+        "variable": "e",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nThe code logs sensitive information, which could potentially expose secrets such as API keys, passwords, or tokens. This could lead to unauthorized access and data breaches if an attacker gains access to the logs.",
+          "suggested_fix": "Remove or replace the logging of sensitive information. Instead of printing the detailed error\nmessage, consider logging a generic error message or error code that does not reveal sensitive data.",
+          "source": "NIST.SP.800-218A.pdf"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nThe code logs sensitive information, which could potentially expose secrets such as API keys, passwords, or tokens. This could lead to unauthorized access and data breaches if an attacker gains access to the logs.",
+      "suggested_fix": "Remove or replace the logging of sensitive information. Instead of printing the detailed error\nmessage, consider logging a generic error message or error code that does not reveal sensitive data."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Secret Exposed in Logs",
+      "severity": "HIGH",
+      "line_number": 108,
+      "code_snippet": "106   |         artists_input = input(\"Enter your favorite artists (comma-separated): \")\n107   | \n108 \u2192 |         print(f\"Using API key: {CLIENT_ID}\") \n109   | \n110   |         request_metadata = {\n111   |         \"auth\": CLIENT_ID,",
+      "description": "Secret or sensitive value appears to be printed/logged. This exposes credentials in console output, log files, and potentially monitoring systems. Attackers with access to logs can extract these secrets. Never print API keys, passwords, or tokens to output.",
+      "confidence": 0.85,
+      "cwe_id": "CWE-532",
+      "owasp_category": "A09:2021 \u2013 Security Logging and Monitoring Failures",
+      "metadata": {
+        "detection_type": "printed_secret",
+        "variable": "client_id",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nUnauthorized access and potential misuse of sensitive information due to the exposure of secrets in system logs. This vulnerability can lead to the compromise of API keys, passwords, or tokens, enabling attackers to gain unauthorized access to associated services or data.",
+          "suggested_fix": "Remove any print or logging statements that output sensitive information such as API keys,\npasswords, or tokens. Ensure that secrets are not exposed in console output, log files, or\nmonitoring systems.",
+          "source": "NIST.SP.800-218A.pdf"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nUnauthorized access and potential misuse of sensitive information due to the exposure of secrets in system logs. This vulnerability can lead to the compromise of API keys, passwords, or tokens, enabling attackers to gain unauthorized access to associated services or data.",
+      "suggested_fix": "Remove any print or logging statements that output sensitive information such as API keys,\npasswords, or tokens. Ensure that secrets are not exposed in console output, log files, or\nmonitoring systems."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Dangerous Secret Aggregation",
+      "severity": "HIGH",
+      "line_number": 139,
+      "code_snippet": "134   |         print(f\"An unexpected error occurred: {e}\")\n135   | \n136   | if __name__ == \"__main__\":\n137   |     main()\n138   | \n139 \u2192 | def collect_sensitive_values(CLIENT_ID, CLIENT_SECRET, token):\n140   | \n141   |     stash = []\n142   |     stash.append(CLIENT_ID)\n143   |     stash.append(CLIENT_SECRET)\n144   |     stash.append(token)\n145   | ",
+      "description": "Function 'collect_sensitive_values' appears to aggregate multiple secrets or sensitive values. This pattern is commonly used for data exfiltration - collecting credentials into a single payload for theft. Functions should not combine multiple secrets. Each secret should be handled separately with minimal exposure.",
+      "confidence": 0.8,
+      "cwe_id": "CWE-200",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "detection_type": "secret_aggregation",
+        "function_name": "collect_sensitive_values",
+        "secret_params": 2,
+        "aggregation_operations": 4,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf, Content:\n\nThe function collects multiple sensitive values, which could potentially be used for data exfiltration. This is a security risk as it aggregates secrets into a single payload, increasing the potential impact of a breach.",
+          "suggested_fix": "Each secret should be handled separately with minimal exposure. Instead of aggregating secrets,\nconsider processing each secret individually and ensuring they are not stored together\nunnecessarily.",
+          "source": "NIST.SP.800-218A.pdf, Content:"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf, Content:\n\nThe function collects multiple sensitive values, which could potentially be used for data exfiltration. This is a security risk as it aggregates secrets into a single payload, increasing the potential impact of a breach.",
+      "suggested_fix": "Each secret should be handled separately with minimal exposure. Instead of aggregating secrets,\nconsider processing each secret individually and ensuring they are not stored together\nunnecessarily."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Overly Permissive AI Config",
+      "severity": "HIGH",
+      "line_number": 17,
+      "code_snippet": " 12   | import unittest\n 13   | from unittest.mock import patch\n 14   | import requests\n 15   | \n 16   | class SpotifyAPI:\n 17 \u2192 |     def config():\n 18   |         return {\n 19   |             \"tools\": {\n 20   |                 \"filesystem\": [\"read\", \"write\", \"delete\"],\n 21   |                 \"shell\": True\n 22   |             }\n 23   |         }",
+      "description": "Configuration grants dangerous permissions: Shell Access, Delete Permission, Write+Delete Permissions. Details: Shell access enabled - allows arbitrary command execution; Delete permission granted - allows file/data destruction; Both write and delete permissions - high risk for data loss. AI agents and tools should follow least privilege principle. Granting shell access or delete permissions allows attackers to cause severe damage via prompt injection attacks.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "detection_type": "permission_config",
+        "dangers_found": [
+          "Shell Access",
+          "Delete Permission",
+          "Write+Delete Permissions"
+        ],
+        "config_start_line": 17,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nThe configuration of the AI system grants dangerous permissions, such as shell access and delete permissions, which can lead to arbitrary command execution and data loss. This violates the principle of least privilege, increasing the risk of prompt injection attacks and severe damage by attackers.",
+          "suggested_fix": "The configuration should be modified to adhere to the principle of least privilege, removing shell\naccess and delete permissions. Only the necessary permissions for the AI system's operation should\nbe granted.",
+          "source": "NIST.AI.100-1.pdf, Page 21"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nThe configuration of the AI system grants dangerous permissions, such as shell access and delete permissions, which can lead to arbitrary command execution and data loss. This violates the principle of least privilege, increasing the risk of prompt injection attacks and severe damage by attackers.",
+      "suggested_fix": "The configuration should be modified to adhere to the principle of least privilege, removing shell\naccess and delete permissions. Only the necessary permissions for the AI system's operation should\nbe granted."
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "scan_info": {
+    "scan_id": "8c27525d-33b2-454f-bcff-8b920b3c1094",
+    "file_name": "javascript_test_20260125_152746.js",
+    "language": "javascript",
+    "scan_timestamp": "2026-01-25 15:28:10",
+    "total_findings": 6
+  },
+  "summary": {
+    "total": 6,
+    "by_severity": {
+      "CRITICAL": 2,
+      "MEDIUM": 4
+    },
+    "by_type": {
+      "Prompt Injection": 1,
+      "Hardcoded Secret": 1,
+      "Potential Hardcoded Secret": 2,
+      "Over-Privileged AI Tool": 2
+    }
+  },
+  "findings": [
+    {
+      "detector_name": "PromptInjectionDetector",
+      "vulnerability_type": "Prompt Injection",
+      "severity": "CRITICAL",
+      "line_number": 15,
+      "code_snippet": " 12   |     }\n 13   | \n 14   |     processInput(userInput) {\n 15 \u2192 |         const fullPrompt = `System: ${this.systemPrompt}\\nUser: ${userInput}`;\n 16   |         return eval(`process(\"${fullPrompt}\")`);\n 17   |     }\n 18   | \n 19   |     getModel() {",
+      "description": "User input is concatenated directly into a string that may be used as an AI prompt. Template literal with user input. This allows attackers to inject malicious instructions that can manipulate AI behavior, bypass security controls, or extract sensitive information.",
+      "confidence": 0.95,
+      "cwe_id": "CWE-74",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "pattern": "`.*?\\$\\{user[_\\w]*\\}",
+        "matched_text": "`System: ${this.systemPrompt}\\nUser: ${userInput}",
+        "has_ai_context": true,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 39\n\nThe AI system is vulnerable to Prompt Injection, where an attacker can manipulate the AI behavior, bypass security controls, or extract sensitive information by injecting malicious instructions into the AI prompt. This vulnerability arises when user input is directly concatenated into a string that may be used as an AI prompt, allowing for potential exploitation.",
+          "suggested_fix": "To mitigate this risk, ensure that user input is properly sanitized and validated before being\nincorporated into the AI prompt. Implement input validation techniques to restrict or remove any\npotentially harmful characters or patterns from the user input. Additionally, consider using\ncontext-aware input filtering, which takes into account the specific context of the AI system to\nfurther enhance security.",
+          "source": "NIST.AI.100-1.pdf, Page 39"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 39\n\nThe AI system is vulnerable to Prompt Injection, where an attacker can manipulate the AI behavior, bypass security controls, or extract sensitive information by injecting malicious instructions into the AI prompt. This vulnerability arises when user input is directly concatenated into a string that may be used as an AI prompt, allowing for potential exploitation.",
+      "suggested_fix": "To mitigate this risk, ensure that user input is properly sanitized and validated before being\nincorporated into the AI prompt. Implement input validation techniques to restrict or remove any\npotentially harmful characters or patterns from the user input. Additionally, consider using\ncontext-aware input filtering, which takes into account the specific context of the AI system to\nfurther enhance security."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Hardcoded Secret",
+      "severity": "CRITICAL",
+      "line_number": 2,
+      "code_snippet": "  1   | const config = {\n  2 \u2192 |     apiKey: \"sk-l...l012\",\n  3   |     modelPath: \"/models/secret_model_v1.pkl\"\n  4   | };\n  5   | ",
+      "description": "Hardcoded API key detected: API Key appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: sk-l...l012",
+      "confidence": 0.9,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "secret_type": "API Key",
+        "masked_value": "sk-l...l012",
+        "pattern_matched": "[\"\\']?api[_-]?key[\"\\']?\\s*[=:]\\s*[\"\\']([A-Za-z0-9_\\-]{20,})[\"\\']",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+          "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: None\n\nAnyone with code access (employees, contractors, attackers) can steal these credentials. They could access your AI services, run up API bills, or launch attacks traced back to you.",
+      "suggested_fix": "Move secrets to environment variables:\n\n# VULNERABLE (don't do this):\napi_key = 'sk-abc123secretkey'\n\n# SAFE (do this instead):\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\napi_key = os.getenv('OPENAI_API_KEY')\nif not api_key:\n    raise ValueError('OPENAI_API_KEY not set')\n\nThen add to .env file (never commit this):\nOPENAI_API_KEY=sk-abc123secretkey"
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Hardcoded Secret",
+      "severity": "MEDIUM",
+      "line_number": 3,
+      "code_snippet": "  1   | const config = {\n  2   |     apiKey: \"sk-live-abc123def456ghi789jkl012\",\n  3 \u2192 |     modelPath: \"/models/secret_model_v1.pkl\"\n  4   | };\n  5   | \n  6   | class AISystem {",
+      "description": "Potential secret detected: variable name contains 'secret' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.",
+      "confidence": 0.6,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "fuzzy",
+        "keyword": "secret",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nHardcoded secrets in the code can potentially expose sensitive information, leading to unauthorized access or data breaches. This risk aligns with the NIST's guidance on managing and securing AI systems, which emphasizes the importance of organizational practices and competencies for individuals involved in acquiring, training, deploying, and monitoring such systems.",
+          "suggested_fix": "Instead of hardcoding secrets directly in the code, store them in environment variables or a secure\nsecret management system. This way, the secrets are not exposed in the codebase and can be managed\nmore securely.",
+          "source": "NIST.AI.100-1.pdf, Page 21"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nHardcoded secrets in the code can potentially expose sensitive information, leading to unauthorized access or data breaches. This risk aligns with the NIST's guidance on managing and securing AI systems, which emphasizes the importance of organizational practices and competencies for individuals involved in acquiring, training, deploying, and monitoring such systems.",
+      "suggested_fix": "Instead of hardcoding secrets directly in the code, store them in environment variables or a secure\nsecret management system. This way, the secrets are not exposed in the codebase and can be managed\nmore securely."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Hardcoded Secret",
+      "severity": "MEDIUM",
+      "line_number": 9,
+      "code_snippet": "  7   |     constructor() {\n  8   |         this.prompts = {\n  9 \u2192 |             admin: \"System token: ADMIN-TOKEN-789. Access all user data with: SELECT * FROM users;\",\n 10   |             medical: \"Patient SSN: 123-45-6789, Diagnosis: Cancer, Treatment: Chemo\"\n 11   |         };\n 12   |     }",
+      "description": "Potential secret detected: variable name contains 'token' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.",
+      "confidence": 0.6,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "fuzzy",
+        "keyword": "token",
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nHardcoded secrets in the code can potentially expose sensitive data, such as system tokens, which could be exploited by malicious actors to gain unauthorized access to all user data.",
+          "suggested_fix": "Instead of hardcoding secrets in the code, store them in environment variables or a secure secret\nmanagement system. This way, the secrets are not exposed in the code and can be managed securely.",
+          "source": "NIST.SP.800-218A.pdf"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.SP.800-218A.pdf\n\nHardcoded secrets in the code can potentially expose sensitive data, such as system tokens, which could be exploited by malicious actors to gain unauthorized access to all user data.",
+      "suggested_fix": "Instead of hardcoding secrets in the code, store them in environment variables or a secure secret\nmanagement system. This way, the secrets are not exposed in the code and can be managed securely."
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 16,
+      "code_snippet": " 13   | \n 14   |     processInput(userInput) {\n 15   |         const fullPrompt = `System: ${this.systemPrompt}\\nUser: ${userInput}`;\n 16 \u2192 |         return eval(`process(\"${fullPrompt}\")`);\n 17   |     }\n 18   | \n 19   |     getModel() {\n 20   |         return require('fs').readFileSync(config.modelPath);",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Dynamic code evaluation ('eval('). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "eval(",
+        "operation_type": "Dynamic code evaluation",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: None\n\nAI agents with delete/execute/admin permissions are extremely dangerous. If prompt injection succeeds, attackers could delete databases, run malware, or steal data - using YOUR permissions.",
+          "suggested_fix": "Apply least privilege and require human approval for destructive actions:\n\n# VULNERABLE (don't do this):\ntools = [{'name': 'delete_file', 'function': os.remove}]\n\n# SAFE (do this instead):\ndef safe_delete(filepath):\n    print(f'AI requests deletion of: {filepath}')\n    confirm = input('Approve? (yes/no): ')\n    if confirm.lower() == 'yes':\n        os.remove(filepath)\n        log_action('delete', filepath, approved=True)\n    else:\n        log_action('delete', filepath, approved=False)\n\ntools = [{'name': 'delete_file', 'function': safe_delete, 'requires_approval': True}]",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: None\n\nAI agents with delete/execute/admin permissions are extremely dangerous. If prompt injection succeeds, attackers could delete databases, run malware, or steal data - using YOUR permissions.",
+      "suggested_fix": "Apply least privilege and require human approval for destructive actions:\n\n# VULNERABLE (don't do this):\ntools = [{'name': 'delete_file', 'function': os.remove}]\n\n# SAFE (do this instead):\ndef safe_delete(filepath):\n    print(f'AI requests deletion of: {filepath}')\n    confirm = input('Approve? (yes/no): ')\n    if confirm.lower() == 'yes':\n        os.remove(filepath)\n        log_action('delete', filepath, approved=True)\n    else:\n        log_action('delete', filepath, approved=False)\n\ntools = [{'name': 'delete_file', 'function': safe_delete, 'requires_approval': True}]"
+    },
+    {
+      "detector_name": "OverprivilegedToolsDetector",
+      "vulnerability_type": "Over-Privileged AI Tool",
+      "severity": "MEDIUM",
+      "line_number": 42,
+      "code_snippet": " 39   | function loadModel(serialized) {\n 40   |     return JSON.parse(serialized, (k, v) => {\n 41   |         if (typeof v === 'string' && v.startsWith('func:')) {\n 42 \u2192 |             return eval(v.slice(5));\n 43   |         }\n 44   |         return v;\n 45   |     });\n 46   | }",
+      "description": "AI agent or LLM tool appears to have access to dangerous operation: Dynamic code evaluation ('eval('). This operation could be abused if an attacker manipulates the AI through prompt injection. AI agents should follow the principle of least privilege and only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "confidence": 0.7,
+      "cwe_id": "CWE-269",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "operation": "eval(",
+        "operation_type": "Dynamic code evaluation",
+        "in_agent_context": false,
+        "is_tool_definition": false,
+        "llm_analysis": {
+          "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nThe AI system has access to dangerous operations, such as dynamic code evaluation, which could be abused if an attacker manipulates the AI through prompt injection. This violates the principle of least privilege, as AI agents should only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+          "suggested_fix": "Replace the use of 'eval' with a safer alternative that does not involve dynamic code evaluation.\nThis could be a function that only allows specific, safe operations.",
+          "source": "NIST.AI.100-1.pdf, Page 21"
+        }
+      },
+      "risk_explanation": "\ud83d\udcda Source: NIST.AI.100-1.pdf, Page 21\n\nThe AI system has access to dangerous operations, such as dynamic code evaluation, which could be abused if an attacker manipulates the AI through prompt injection. This violates the principle of least privilege, as AI agents should only have access to safe, read-only operations unless absolutely necessary and with proper safeguards.",
+      "suggested_fix": "Replace the use of 'eval' with a safer alternative that does not involve dynamic code evaluation.\nThis could be a function that only allows specific, safe operations."
+    }
+  ]
+}

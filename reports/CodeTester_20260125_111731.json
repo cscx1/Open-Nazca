@@ -1,0 +1,50 @@
+{
+  "scan_info": {
+    "scan_id": "local-1769357851",
+    "file_name": "CodeTester.py",
+    "language": "python",
+    "scan_timestamp": "2026-01-25 11:17:31",
+    "total_findings": 2
+  },
+  "summary": {
+    "total": 2,
+    "by_severity": {
+      "MEDIUM": 2
+    },
+    "by_type": {
+      "Potential Hardcoded Secret": 2
+    }
+  },
+  "findings": [
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Hardcoded Secret",
+      "severity": "MEDIUM",
+      "line_number": 31,
+      "code_snippet": " 29   |     \n 30   |     def get_access_token(self):\n 31 \u2192 |         url = \"https://accounts.spotify.com/api/token\"\n 32   |         payload = {'grant_type': 'client_credentials'}\n 33   |         headers = {\n 34   |             'Authorization': f'Basic {self._encode_credentials()}',",
+      "description": "Potential secret detected: variable name contains 'token' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.",
+      "confidence": 0.6,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "fuzzy",
+        "keyword": "token"
+      }
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Potential Hardcoded Secret",
+      "severity": "MEDIUM",
+      "line_number": 94,
+      "code_snippet": " 92   |     #Fake API Keys\n 93   |     CLIENT_ID = '80f51630c7514a33ac25646644486c'  \n 94 \u2192 |     CLIENT_SECRET = '7dd34e6977b44b7185344474'  \n 95   |     \n 96   |     try:\n 97   |         spotify_api = SpotifyAPI(CLIENT_ID, CLIENT_SECRET)",
+      "description": "Potential secret detected: variable name contains 'secret' and appears to have a hardcoded value. Manual review recommended. If this is a secret, it should be stored in environment variables or a secure secret management system.",
+      "confidence": 0.6,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "detection_type": "fuzzy",
+        "keyword": "secret"
+      }
+    }
+  ]
+}

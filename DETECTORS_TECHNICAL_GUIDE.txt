@@ -1,0 +1,515 @@
+Technologies Used in LLMCheck
+Core Stack
+1. Python 3.8+
+Main programming language
+Standard libraries: re, dataclasses, typing, abc, logging
+
+2. Snowflake
+snowflake-connector-python - Database connection
+snowflake-snowpark-python - Data operations
+Snowflake Cortex - Built-in LLM (Mistral-Large) for AI analysis
+
+3. Streamlit
+Web UI framework
+File upload, interactive scanning interface
+Real-time results display
+
+AI/LLM Technologies
+Primary:
+Snowflake Cortex (Mistral-Large) - Default LLM provider
+Alternative Options:
+OpenAI (GPT-4) - openai>=1.12.0
+Anthropic (Claude) - anthropic>=0.18.1
+
+RAG (Retrieval Augmented Generation):
+LangChain - RAG framework
+LangChain Community - Document loaders
+PyPDF - PDF policy document parsing
+Detection & Analysis
+Regex (re) - Pattern matching for vulnerabilities
+Bandit (optional) - Additional Python security linting
+GitPython - Git integration for version control
+
+
+
+================================================================================
+DETECTORS FOLDER - TECHNICAL EXPLANATION GUIDE
+================================================================================
+
+This guide helps you explain each detector file in simple, technical terms.
+Keep explanations under 30 seconds each.
+
+================================================================================
+QUICK REFERENCE - KEY CODE TO SHOW (if demoing)
+================================================================================
+
+1. FINDING DATACLASS (base_detector.py):
+   @dataclass
+   class Finding:
+       vulnerability_type: str
+       severity: str  # CRITICAL, HIGH, MEDIUM, LOW
+       line_number: int
+       code_snippet: str
+       cwe_id: str  # Industry standard classification
+       confidence: float
+
+REGEX = Regular Expressions
+A pattern-matching language for finding text.
+Simple analogy:
+Like "Ctrl+F" search on steroids
+Instead of searching for exact text, you search for patterns
+Examples:
+Exact search: "password" finds "password"
+Regex pattern: password\s*=\s*".*" finds:
+password = "abc123"
+password="secret"
+password = "anything"
+
+
+2. REGEX PATTERN EXAMPLE (hardcoded_secrets_detector.py):
+   (r'CLIENT[_-]?SECRET\s*=\s*["\']([A-Za-z0-9_\-]{16,})["\']',
+    'Client Secret', 'CRITICAL', 'Hardcoded client secret detected')
+
+3. MULTI-LINE TRACKING (prompt_injection_detector.py):
+   # Track user input across lines
+   user_vars[var_name] = line_num
+   if var_name in line and ai_context:
+       report_vulnerability()
+
+4. DEDUPLICATION (hardcoded_secrets_detector.py):
+   lines_with_pattern_match = set()
+   if line_num not in skip_lines:
+       # Only detect once per line
+
+5. CONFIG PARSING (overprivileged_tools_detector.py):
+   brace_count = line.count('{') - line.count('}')
+   if brace_count <= 0:
+       analyze_config_block()
+
+================================================================================
+
+================================================================================
+1. base_detector.py - Foundation
+================================================================================
+
+LIBRARIES USED:
+- abc (Abstract Base Classes) - For defining abstract base class
+- dataclasses - For the Finding data structure
+- typing (List, Dict, Optional) - Type hints for code safety
+- logging - For debug/info messages
+
+WHAT IT IS:
+- Abstract base class that all detectors inherit from
+- Defines the common interface and shared utilities
+
+KEY COMPONENTS:
+
+1. Finding Dataclass (Lines 14-25):
+   @dataclass
+   class Finding:
+       detector_name: str
+       vulnerability_type: str
+       severity: str  # CRITICAL, HIGH, MEDIUM, LOW
+       line_number: Optional[int]
+       code_snippet: str
+       description: str
+       confidence: float = 1.0
+       cwe_id: Optional[str] = None
+       owasp_category: Optional[str] = None
+
+2. BaseDetector Abstract Class:
+   - @abstractmethod detect() - Must be implemented by all detectors
+   - extract_code_snippet() - Grabs code with context lines
+   - get_line_number() - Finds line number of a pattern
+
+IMPORTANT CODE:
+   def extract_code_snippet(self, code: str, line_number: int, context_lines: int = 4):
+       # Shows code with line numbers and arrow pointing to vulnerable line
+       marker = " → " if line_num == line_number else "   "
+
+WHY IT MATTERS:
+- Ensures all detectors follow same structure
+- Code reuse - don't repeat snippet extraction logic
+- Makes it easy to add new detectors
+
+TALKING POINTS:
+"We use object-oriented design with a base class and Python dataclasses 
+for structured vulnerability findings. The Finding dataclass includes 
+CWE IDs and OWASP categories for industry-standard classification."
+
+================================================================================
+2. prompt_injection_detector.py - AI Prompt Security
+================================================================================
+
+LIBRARIES USED:
+- re (Regular Expressions) - Pattern matching for dangerous syntax
+- typing (List) - Type safety
+- logging - Tracking detections
+
+WHAT IT DETECTS:
+- Unsafe concatenation of user input into AI prompts
+- Example: f"System prompt: {user_input}" ← DANGEROUS
+
+HOW IT WORKS:
+1. Pattern matching for dangerous syntax:
+   - Python f-strings with user variables
+   - String concatenation (+ operator)
+   - Template literals in JavaScript
+2. Multi-line analysis: Tracks user input variables across lines
+3. Context-aware: Higher confidence when AI keywords present (gpt, openai, prompt)
+
+KEY REGEX PATTERNS (Lines 28-39):
+   (r'f["\'].*?\{user[_\w]*\}', 'F-string with user input')
+   (r'\+\s*user[_\w]*', 'String concatenation with user variable')
+   (r'\.format\(.*?user', 'format() with user input')
+   (r'`.*?\$\{user[_\w]*\}', 'Template literal with user input')  # JS/TS
+
+AI KEYWORDS CHECKED (Lines 48-51):
+   ['prompt', 'system_prompt', 'gpt', 'openai', 'anthropic', 'claude', 
+    'llm', 'completion', 'chat', 'message']
+
+IMPORTANT CODE - Multi-line Analysis (Lines 102-135):
+   # Step 1: Find where user input is captured
+   user_input_pattern = r'(\w+)\s*=\s*(?:input\(|request\.form|request\.json)'
+   
+   # Step 2: Track that variable across lines
+   user_vars[var_name] = line_num
+   
+   # Step 3: Check if variable used in AI context later
+   if re.search(rf'\b{re.escape(var)}\b', line) and ai_context:
+       # Flag as vulnerability
+
+SEVERITY: CRITICAL (CWE-74 - Improper Neutralization)
+
+TALKING POINTS:
+"Uses regex pattern matching to find user input concatenated into AI prompts.
+The multi-line analysis tracks user variables - if user_input = input() on 
+line 10 and it's used in a prompt on line 15, we catch it. We also check 
+for AI-related keywords to increase confidence."
+
+================================================================================
+3. hardcoded_secrets_detector.py - Credential Exposure
+================================================================================
+
+LIBRARIES USED:
+- re (Regular Expressions) - Pattern matching for secrets
+- typing (List, Tuple) - Type annotations
+- logging - Detection tracking
+
+WHAT IT DETECTS:
+- API keys, passwords, tokens hardcoded in source code
+- Secrets printed to console/logs
+- Functions that aggregate multiple secrets (data exfiltration pattern)
+
+HOW IT WORKS:
+1. REGEX PATTERNS (20+ patterns, Lines 27-81):
+   - CLIENT_ID/CLIENT_SECRET (OAuth credentials)
+   - OpenAI keys (sk-...)
+   - AWS keys (AKIA...)
+   - Generic: password, secret_key, auth_token
+   
+2. PRINTED SECRETS:
+   - Scans print(), logger.info() statements
+   - Checks if secret variables are being logged
+   
+3. SECRET AGGREGATION:
+   - Detects functions that collect multiple secrets
+   - Pattern: function with 2+ secret params that appends/joins them
+   
+4. URL HANDLING:
+   - URLs with secret keywords → LOW severity (likely false positive)
+
+IMPORTANT REGEX PATTERNS (Lines 39-47):
+   # OAuth Credentials
+   (r'CLIENT[_-]?ID\s*=\s*["\']([A-Za-z0-9_\-]{20,})["\']',
+    'Client ID', 'CRITICAL', 'Hardcoded client ID detected')
+   
+   (r'CLIENT[_-]?SECRET\s*=\s*["\']([A-Za-z0-9_\-]{16,})["\']',
+    'Client Secret', 'CRITICAL', 'Hardcoded client secret detected')
+   
+   # OpenAI
+   (r'["\']?openai[_-]?api[_-]?key["\']?\s*[=:]\s*["\']sk-[A-Za-z0-9]{40,}["\']',
+    'OpenAI API Key', 'CRITICAL', 'OpenAI API key exposed')
+
+SECRET MASKING CODE (Lines 225-235):
+   def _mask_secret(self, secret: str, show_chars: int = 4):
+       # Shows: sk-abc...xyz instead of full key
+       return f"{secret[:show_chars]}...{secret[-show_chars:]}"
+
+DEDUPLICATION LOGIC (Lines 117-120):
+   line_already_matched = False
+   for pattern in self.secret_patterns:
+       if line_already_matched:
+           break  # Only one match per line
+
+URL DETECTION (Lines 308-325):
+   # Check if value is a URL
+   is_url = bool(re.search(r'https?://', line))
+   if is_url:
+       # Lower severity: LOW instead of MEDIUM
+       vulnerability_type = "Potential Threat - URL with Secret Keyword"
+
+PRINTED SECRETS DETECTION (Lines 350-400):
+   # Checks for: print(f"Key: {api_key}")
+   log_patterns = [
+       r'print\s*\(.*?\{(\w+)\}',  # f-string
+       r'logger?\.\w+\s*\(.*?\{(\w+)\}',  # logging
+   ]
+
+SECRET AGGREGATION DETECTION (Lines 405-480):
+   # Looks for functions like:
+   # def collect_secrets(client_id, client_secret, token):
+   #     stash = []
+   #     stash.append(client_id)
+   #     stash.append(client_secret)
+   #     return "|".join(stash)
+
+DEDUPLICATION:
+- Only one match per line (prevents CLIENT_ID matching twice)
+- Fuzzy detection skips lines already matched by patterns
+- Lines_with_pattern_match set tracks what's been found
+
+SEVERITY: CRITICAL for secrets, HIGH for printed/aggregated, LOW for URLs
+
+TALKING POINTS:
+"Three-layer detection: 20+ regex patterns for known secrets like OAuth 
+credentials, behavioral analysis for dangerous patterns like printing secrets 
+to logs or aggregating them for exfiltration, and smart URL handling to reduce 
+false positives. We mask secrets in reports for safety."
+
+================================================================================
+4. overprivileged_tools_detector.py - AI Permission Security
+================================================================================
+
+LIBRARIES USED:
+- re (Regular Expressions) - Pattern matching for permissions
+- typing (List, Set) - Type safety with sets for deduplication
+- logging - Detection tracking
+
+WHAT IT DETECTS:
+- AI agents with dangerous permissions (shell access, file deletion)
+- Config dictionaries with risky settings
+
+HOW IT WORKS:
+1. OPERATION DETECTION:
+   - Tracks 25+ dangerous operations (os.remove, subprocess.run, DROP TABLE)
+   - Context-aware: Higher severity if in agent/tool context
+   
+2. TOOL STRUCTURE ANALYSIS:
+   - Finds tools = [...] lists
+   - Counts dangerous operations in the list
+   
+3. PERMISSION CONFIG ANALYSIS:
+   - Scans config dictionaries for:
+     * "shell": True
+     * "delete" in permissions arrays
+     * "admin": True, "execute": True
+   - Tracks brace matching to find config blocks
+
+DANGEROUS OPERATIONS DICTIONARY (Lines 29-56):
+   self.dangerous_operations = {
+       # File system
+       'delete_file': 'File deletion',
+       'os.remove': 'File removal',
+       'shutil.rmtree': 'Recursive directory deletion',
+       'rm -rf': 'Recursive force deletion',
+       
+       # Database
+       'drop table': 'Database DROP TABLE operation',
+       'truncate table': 'Table truncation',
+       
+       # Code execution
+       'exec(': 'Arbitrary code execution',
+       'eval(': 'Dynamic code evaluation',
+       'subprocess.run': 'Subprocess execution',
+       'shell=True': 'Shell command execution',
+       
+       # Security
+       'sudo': 'Elevated privileges',
+       'os.chmod': 'Permission modification',
+   }
+
+AGENT KEYWORDS (Lines 59-63):
+   ['agent', 'tool', 'function_call', 'langchain', 'llm_tool', 
+    'agent_executor', 'tools=', 'available_functions']
+
+TOOL STRUCTURE ANALYSIS (Lines 180-210):
+   # Pattern: tools = [Tool(...), Tool(...)]
+   tools_list_pattern = r'tools\s*=\s*\[(.*?)\]'
+   
+   # Count dangerous ops in the list
+   dangerous_ops_found: Set[str] = set()
+   for operation in self.dangerous_operations.keys():
+       if operation.lower() in tools_content.lower():
+           dangerous_ops_found.add(operation)
+
+PERMISSION CONFIG DETECTION (Lines 220-300):
+   dangerous_config_patterns = [
+       (r'["\']shell["\']\s*:\s*True', 'Shell Access',
+        'Shell access enabled - allows arbitrary command execution'),
+       
+       (r'["\'](?:filesystem|permissions)["\']\s*:\s*\[.*?["\']delete["\'].*?\]',
+        'Delete Permission', 'Delete permission granted'),
+       
+       (r'["\'](?:admin|root|sudo)["\']?\s*:\s*True',
+        'Elevated Privileges', 'Admin privileges enabled'),
+   ]
+
+BRACE MATCHING FOR CONFIG BLOCKS (Lines 270-285):
+   # Tracks opening/closing braces to find config boundaries
+   in_config = False
+   brace_count = 0
+   
+   if re.search(r'def\s+config\s*\(|config\s*=\s*\{', line):
+       in_config = True
+       brace_count = line.count('{') - line.count('}')
+   
+   if in_config:
+       brace_count += line.count('{') - line.count('}')
+       if brace_count <= 0:
+           # Config block ended, analyze it
+           check_for_dangerous_patterns()
+
+CONTEXT-AWARE SEVERITY (Lines 125-128):
+   # Higher severity if explicitly in agent context
+   severity = "HIGH" if (in_agent_context or is_tool_definition) else "MEDIUM"
+   confidence = 0.90 if (in_agent_context or is_tool_definition) else 0.70
+
+DANGEROUS OPERATIONS INCLUDE:
+- File ops: delete_file, os.remove, shutil.rmtree
+- Database: DROP TABLE, TRUNCATE
+- Execution: exec(), eval(), subprocess
+- Privileges: sudo, os.chmod
+
+SEVERITY: HIGH (CWE-269 - Improper Privilege Management)
+
+TALKING POINTS:
+"Detects when AI agents are given dangerous permissions using three methods: 
+scanning for 25+ risky operations, analyzing tool lists with regex, and 
+parsing config dictionaries with brace-matching to find settings like 
+'shell: True'. Context-aware scoring increases severity when we detect 
+agent-related keywords."
+
+================================================================================
+ARCHITECTURE SUMMARY (for overview)
+================================================================================
+
+CORE LIBRARIES USED:
+- re (regex) - Fast pattern matching for vulnerability detection
+- typing - Type hints (List, Dict, Optional, Set) for code safety
+- dataclasses - Structured Finding objects with automatic methods
+- abc (Abstract Base Classes) - Enforces detector interface
+- logging - Debug and info messages for tracking detections
+
+DESIGN PATTERN:
+- Modular: Each detector is independent
+- Extensible: Add new detectors by inheriting from BaseDetector
+- Separation of concerns: Detection logic separate from reporting
+- Object-oriented: Abstract base class + concrete implementations
+
+DETECTION METHODS:
+1. Pattern matching (regex) - Fast, precise for known patterns
+   Example: r'CLIENT[_-]?SECRET\s*=\s*["\']([A-Za-z0-9_\-]{16,})["\']'
+   
+2. Multi-line analysis - Track variables across code
+   Example: user_input = input() on line 10 → used in prompt on line 15
+   
+3. Behavioral analysis - Detect dangerous patterns
+   Example: Functions that aggregate multiple secrets (data exfiltration)
+   
+4. Context-aware scoring - Higher confidence when keywords present
+   Example: "gpt", "openai", "agent" increase confidence
+
+KEY ALGORITHMS:
+1. Deduplication: Track line numbers to prevent duplicate findings
+2. Brace matching: Parse config blocks by counting { and }
+3. Secret masking: Show "sk-abc...xyz" instead of full keys
+4. Contextual severity: Same operation is HIGH in agent context, MEDIUM elsewhere
+
+OUTPUT:
+- Each detector returns List[Finding]
+- Scanner aggregates, deduplicates, and ranks by severity
+- Findings fed to LLM for human-readable explanations
+- CWE IDs and OWASP categories for industry standards
+
+WHY THIS APPROACH:
+- Balance speed (regex) with accuracy (context analysis)
+- Catches real-world patterns we found in production code
+- Low false positive rate through smart deduplication and URL handling
+- Python's native libraries (re, dataclasses) = no heavy dependencies
+
+================================================================================
+DEMO TALKING POINTS
+================================================================================
+
+If showing code briefly (30 seconds):
+1. "Here's base_detector.py - the foundation with the Finding dataclass"
+2. "Each detector like prompt_injection has a detect() method"
+3. "We use regex for speed but add multi-line analysis for accuracy"
+4. "Notice the deduplication logic here - prevents duplicate findings"
+5. "Severity levels help prioritize: CRITICAL → HIGH → MEDIUM → LOW"
+
+If NOT showing code (15 seconds):
+"The detectors use a three-layer approach: regex pattern matching for speed,
+contextual analysis for accuracy, and behavioral detection for complex
+attack patterns. Each is modular and outputs standardized Finding objects
+with CWE IDs and OWASP categories."
+
+================================================================================
+30-SECOND TECHNICAL WALKTHROUGH SCRIPT
+================================================================================
+
+"Let me quickly show you the detector architecture:
+
+[Show base_detector.py]
+We start with a Finding dataclass - this stores every vulnerability with 
+severity, line number, CWE ID, and confidence score.
+
+[Show hardcoded_secrets_detector.py patterns]
+Here's a regex pattern for OAuth CLIENT_SECRET. We have 20+ patterns like 
+this for different credential types. Notice the captured group - that's the 
+actual secret value we'll mask in reports.
+
+[Show prompt_injection multi-line code]
+This is the multi-line tracking logic. If user_input is captured on line 10,
+we track it in a dictionary. When we see that variable used in a prompt 
+later, we flag it. This catches vulnerabilities that span multiple lines.
+
+[Show overprivileged config detection]
+Here's the brace-matching algorithm for config parsing. We track opening and
+closing braces to find config blocks, then scan for dangerous settings like
+'shell: True'.
+
+All detectors output standardized Finding objects that get ranked by severity
+and sent to the LLM for plain-English explanations."
+
+================================================================================
+TECHNICAL STRENGTHS TO EMPHASIZE
+================================================================================
+
+1. PYTHON STANDARD LIBRARY ONLY
+   - No heavy dependencies (just re, dataclasses, typing, abc)
+   - Fast installation, reliable across environments
+
+2. INDUSTRY STANDARD CLASSIFICATION
+   - CWE IDs (Common Weakness Enumeration)
+   - OWASP categories (Top 10 mapping)
+   - Makes findings auditable and trackable
+
+3. REAL-WORLD PATTERNS
+   - CLIENT_ID/CLIENT_SECRET (OAuth)
+   - Spotify API credentials
+   - LangChain agent configurations
+   - Based on actual vulnerability patterns we've seen
+
+4. PERFORMANCE
+   - Regex is O(n) - scales linearly with code size
+   - CodeTester.py (191 lines) scanned in 17 milliseconds
+   - Can handle large codebases efficiently
+
+5. EXTENSIBILITY
+   - Want to add Stripe API key detection? Add one regex pattern
+   - Want a new detector? Inherit from BaseDetector, implement detect()
+   - Modular design = easy to maintain and extend
+
+================================================================================

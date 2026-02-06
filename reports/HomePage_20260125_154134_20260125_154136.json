@@ -1,0 +1,15 @@
+{
+  "scan_info": {
+    "scan_id": "dc5bbc7b-0b2e-438e-8673-54bb0ac72477",
+    "file_name": "HomePage_20260125_154134.js",
+    "language": "javascript",
+    "scan_timestamp": "2026-01-25 15:41:36",
+    "total_findings": 0
+  },
+  "summary": {
+    "total": 0,
+    "by_severity": {},
+    "by_type": {}
+  },
+  "findings": []
+}
