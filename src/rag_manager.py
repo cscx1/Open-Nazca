@@ -109,30 +109,25 @@ class RAGManager:
 
             for i in range(0, total_chunks, batch_size):
                 batch = chunks[i:i + batch_size]
-                values_list = []
                 
-                for chunk in batch:
-                    # Sanitize text
-                    text = chunk.page_content.replace("'", "''").replace("\\", "\\\\")
-                    source = chunk.metadata.get('source', 'unknown').replace("'", "''")
-                    values_list.append(f"('{text}', '{source}')")
-                
-                if not values_list:
+                if not batch:
                     continue
+                
+                # SECURITY FIX: Use parameterized queries instead of string interpolation
+                # Insert one row at a time with proper parameterization
+                for chunk in batch:
+                    text = chunk.page_content
+                    source = chunk.metadata.get('source', 'unknown')
                     
-                values_str = ",".join(values_list)
-                
-                # Single optimization query per batch
-                query = f"""
-                INSERT INTO LLMCHECK_DB.RAG.DOCUMENT_CHUNKS (CHUNK_TEXT, EMBEDDING, SOURCE_FILE)
-                SELECT 
-                    column1,
-                    SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', column1),
-                    column2
-                FROM VALUES {values_str}
-                """
-                
-                cursor.execute(query)
+                    query = """
+                    INSERT INTO LLMCHECK_DB.RAG.DOCUMENT_CHUNKS (CHUNK_TEXT, EMBEDDING, SOURCE_FILE)
+                    SELECT 
+                        %s,
+                        SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', %s),
+                        %s
+                    """
+                    
+                    cursor.execute(query, (text, text, source))
                 count += len(batch)
                 
                 # Update progress
@@ -159,8 +154,8 @@ class RAGManager:
             
         cursor = self.conn.cursor()
         try:
-            escaped_name = filename.replace("'", "''")
-            cursor.execute(f"DELETE FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS WHERE SOURCE_FILE = '{escaped_name}'")
+            # SECURITY FIX: Use parameterized query instead of string interpolation
+            cursor.execute("DELETE FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS WHERE SOURCE_FILE = %s", (filename,))
             return f"🗑️ Deleted '{filename}'."
         except Exception as e:
             return f"Failed to delete: {e}"
@@ -177,19 +172,18 @@ class RAGManager:
             
         cursor = self.conn.cursor()
         try:
-            escaped_q = query.replace("'", "''")
-            
-            search_sql = f"""
+            # SECURITY FIX: Use parameterized query instead of string interpolation
+            search_sql = """
             SELECT CHUNK_TEXT, SOURCE_FILE
             FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS
             ORDER BY VECTOR_COSINE_SIMILARITY(
-                SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', '{escaped_q}'),
+                SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', %s),
                 EMBEDDING
             ) DESC
             LIMIT 4
             """
             
-            cursor.execute(search_sql)
+            cursor.execute(search_sql, (query,))
             results = cursor.fetchall()
             
             if not results:
@@ -248,17 +242,15 @@ class RAGManager:
             Answer:
             """
             
-            # Call Cortex Complete with Temperature 0
-            escaped_prompt = prompt.replace("'", "''")
-            
-            complete_sql = f"""
+            # SECURITY FIX: Use parameterized query instead of string interpolation
+            complete_sql = """
             SELECT SNOWFLAKE.CORTEX.COMPLETE(
                 'mistral-large', 
-                '{escaped_prompt}',
-                {{'temperature': 0.0}}
+                %s,
+                OBJECT_CONSTRUCT('temperature', 0.0)
             )
             """
-            cursor.execute(complete_sql)
+            cursor.execute(complete_sql, (prompt,))
             answer_row = cursor.fetchone()
             
             if answer_row:

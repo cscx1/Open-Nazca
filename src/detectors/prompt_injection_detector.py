@@ -84,11 +84,23 @@ class PromptInjectionDetector(BaseDetector):
                 matches = re.finditer(pattern, line, re.IGNORECASE)
                 
                 for match in matches:
+                    # RULE: Only classify as Prompt Injection if the line
+                    # has AI/LLM context.  Without LLM context the matched
+                    # pattern (e.g. f-string with {username}) is likely
+                    # SQL concatenation, template rendering, or another
+                    # injection class — NOT prompt injection.  The AST
+                    # pipeline will classify those by sink.
+                    if not has_ai_context:
+                        logger.debug(
+                            f"Suppressed prompt-injection pattern at "
+                            f"{file_name}:{line_num} — no AI/LLM context"
+                        )
+                        continue
+                    
                     # Extract code snippet
                     snippet = self.extract_code_snippet(code, line_num, context_lines=3)
                     
-                    # Higher confidence if AI keywords are present
-                    confidence = 0.95 if has_ai_context else 0.75
+                    confidence = 0.95
                     
                     # Create finding
                     finding = Finding(
@@ -98,8 +110,8 @@ class PromptInjectionDetector(BaseDetector):
                         line_number=line_num,
                         code_snippet=snippet,
                         description=(
-                            f"User input is concatenated directly into a string that may be "
-                            f"used as an AI prompt. {description}. This allows attackers to "
+                            f"User input is concatenated directly into a string that is "
+                            f"used as an AI/LLM prompt. {description}. This allows attackers to "
                             f"inject malicious instructions that can manipulate AI behavior, "
                             f"bypass security controls, or extract sensitive information."
                         ),

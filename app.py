@@ -1,6 +1,11 @@
 import streamlit as st
 import sys
 import os
+import re
+import html as html_module
+import json
+import tempfile
+import traceback
 from pathlib import Path
 from datetime import datetime
 import time
@@ -255,6 +260,64 @@ st.markdown("""
         flex: 1 1 350px !important;
     }
 
+    /* Sandbox Lab Styles */
+    .sandbox-console {
+        background: #020617;
+        border: 1px solid #1E293B;
+        border-radius: 4px;
+        padding: 16px;
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: 12px;
+        color: #94A3B8;
+        max-height: 400px;
+        overflow-y: auto;
+        line-height: 1.6;
+    }
+    .sandbox-console .log-phase { color: #818CF8; font-weight: 700; }
+    .sandbox-console .log-ok    { color: #34D399; }
+    .sandbox-console .log-fail  { color: #F87171; }
+    .sandbox-console .log-warn  { color: #FBBF24; }
+    .sandbox-console .log-dim   { color: #475569; }
+
+    .sb-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    .sb-confirmed   { background: #991B1B; color: #FCA5A5; border: 1px solid #DC2626; }
+    .sb-remediated  { background: #064E3B; color: #6EE7B7; border: 1px solid #10B981; }
+    .sb-partial     { background: #713F12; color: #FDE68A; border: 1px solid #F59E0B; }
+    .sb-safe        { background: #1E3A5F; color: #93C5FD; border: 1px solid #3B82F6; }
+    .sb-untested    { background: #312E81; color: #C4B5FD; border: 1px solid #7C3AED; }
+
+    .sb-file-tag {
+        display: inline-block;
+        background: #1E293B;
+        color: #94A3B8;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        margin: 2px;
+        border: 1px solid #334155;
+    }
+
+    .sb-path-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-bottom: 1px solid #1E293B;
+        gap: 12px;
+        transition: background 0.15s;
+    }
+    .sb-path-row:hover { background: #0F172A; }
+    .sb-path-id   { color: #64748B; font-family: monospace; font-size: 12px; min-width: 50px; }
+    .sb-path-name { color: #E2E8F0; flex: 1; font-size: 13px; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -363,7 +426,7 @@ def main():
         
         page = st.radio(
             "Navigation",
-            ["📊  Dashboard", "🔬  Analysis Lab", "📚  Knowledge Base", "📜  Scan History"],
+            ["📊  Dashboard", "🔬  Analysis Lab", "🧪  Sandbox Lab", "📚  Knowledge Base", "📜  Scan History"],
             label_visibility="collapsed",
             disabled=nav_disabled
         )
@@ -421,6 +484,8 @@ def main():
         render_home_dashboard()
     elif "Analysis Lab" in page:
         render_analysis_lab(use_snowflake, use_llm, llm_provider, r_json, r_html, r_md)
+    elif "Sandbox Lab" in page:
+        render_sandbox_lab()
     elif "Knowledge Base" in page:
         render_knowledge_base()
     elif "History" in page:
@@ -765,13 +830,19 @@ def render_scan_results_detailed(results):
         
         # Expandable Details
         for finding in results['findings']:
+            import html as html_module
             sev_class = f"badge-{finding['severity'].lower()}"
+            # SECURITY FIX: Escape all user-derived content before HTML embedding
+            safe_severity = html_module.escape(finding['severity'])
+            safe_vuln_type = html_module.escape(finding['vulnerability_type'])
+            safe_line = html_module.escape(str(finding.get('line_number', 'N/A')))
+            safe_desc = html_module.escape(finding['description'])
             st.markdown(f"""
             <div style="background: #0F2744; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155;">
-                <span class="{sev_class}">{finding['severity']}</span>
-                <span style="color: #A0AEBC; margin-left: 10px; font-weight: 600;">{finding['vulnerability_type']}</span>
-                <span style="float: right; color: #64748B; font-size: 12px;">Line {finding.get('line_number', 'N/A')}</span>
-                <p style="color: #E2E8F0; margin-top: 10px; font-size: 14px;">{finding['description']}</p>
+                <span class="{sev_class}">{safe_severity}</span>
+                <span style="color: #A0AEBC; margin-left: 10px; font-weight: 600;">{safe_vuln_type}</span>
+                <span style="float: right; color: #64748B; font-size: 12px;">Line {safe_line}</span>
+                <p style="color: #E2E8F0; margin-top: 10px; font-size: 14px;">{safe_desc}</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -875,12 +946,13 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
         
         scanner.close()
         
-        # Cleanup
+        # SECURITY FIX: Ensure temp file cleanup with logging, always execute in finally-like pattern
         try:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-        except Exception:
-             pass
+        except Exception as cleanup_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to clean up temp file {tmp_path}: {cleanup_err}")
              
         progress_bar.progress(100)
         time.sleep(0.5)
@@ -898,7 +970,1223 @@ def perform_scan(uploaded_file, use_snowflake, use_llm, llm_provider, r_json, r_
         st.session_state.scan_history.append(scan_entry)
         
     except Exception as e:
-        st.error(f"Scan failed: {str(e)}")
+        # SECURITY FIX: Sanitize error messages to prevent credential leakage
+        import logging
+        logging.getLogger(__name__).error(f"Scan failed: {str(e)}")
+        # Show generic message to user, not raw exception which may contain credentials
+        st.error("Scan failed. Please check the application logs for details or verify your configuration.")
+
+# ================================================================
+#  SANDBOX VERIFICATION LAB  —  User-Uploaded Code Testing
+# ================================================================
+
+STATUS_BADGE = {
+    "vulnerable": '<span class="sb-badge sb-confirmed">CONFIRMED REACHABLE</span>',
+    "fixed":      '<span class="sb-badge sb-remediated">REACHABILITY ELIMINATED</span>',
+    "partial":    '<span class="sb-badge sb-partial">UNVERIFIABLE</span>',
+    "clean":      '<span class="sb-badge sb-safe">CLEAN</span>',
+    "manual":     '<span class="sb-badge sb-untested">REQUIRES MANUAL REVIEW</span>',
+}
+
+# ── Analysis pipeline imports ─────────────────────────────────
+from src.analysis.taint_tracker import TaintTracker
+from src.analysis.attack_graph import AttackGraph, AttackPath
+from src.analysis.sink_classifier import SinkClassifier
+from src.analysis.reachability import (
+    ReachabilityVerifier, ReachabilityResult, ReachabilityStatus,
+)
+from src.analysis.remediator import FunctionalRemediator
+
+
+# ── Classify findings using library-accurate sink data when available ──
+
+# Fallback maps for pattern-detected findings without AST analysis
+_ENTRY_MAP = {
+    'hardcoded': 'Source Code', 'secret': 'Source Code', 'password': 'Source Code',
+    'api key': 'Source Code', 'token': 'Source Code', 'credential': 'Source Code',
+    'prompt': 'User Input', 'injection': 'User Input',
+    'dangerous': 'Dynamic Input', 'eval': 'Dynamic Input', 'exec': 'Dynamic Input',
+    'system': 'System Interface', 'shell': 'System Interface', 'privileged': 'System Interface',
+}
+_SINK_MAP = {
+    'hardcoded': 'Credential Exposure', 'secret': 'Credential Exposure',
+    'password': 'Credential Exposure', 'api key': 'Credential Exposure',
+    'token': 'Credential Exposure', 'credential': 'Credential Exposure',
+    'prompt': 'LLM / AI Service', 'injection': 'LLM / AI Service',
+    'dangerous': 'Code Execution', 'eval': 'Code Execution', 'exec': 'Code Execution',
+    'system': 'OS / Shell Access', 'shell': 'OS / Shell Access', 'privileged': 'OS / Shell Access',
+}
+
+
+def _classify_finding(finding_dict):
+    """Classify a finding into (entry_category, sink_category).
+
+    Prefers library-accurate sink data from the analysis pipeline.
+    Falls back to keyword matching for pattern-only findings.
+    """
+    # If attack path data is present, use it directly
+    apath = finding_dict.get('attack_path')
+    if apath:
+        src = apath.get('source', {})
+        sink = apath.get('sink', {})
+        entry = src.get('name', 'Input')
+        sink_name = sink.get('name', 'Sensitive Operation')
+        # Use SinkClassifier for accurate category
+        info = SinkClassifier.classify(sink_name)
+        if info:
+            return entry, info.vulnerability_type
+        return entry, sink_name
+
+    # Fallback: keyword-based classification
+    vl = (finding_dict if isinstance(finding_dict, str)
+          else finding_dict.get('vulnerability_type', '')).lower()
+    entry, sink = 'Input', 'Sensitive Operation'
+    for kw, label in _ENTRY_MAP.items():
+        if kw in vl:
+            entry = label
+            break
+    for kw, label in _SINK_MAP.items():
+        if kw in vl:
+            sink = label
+            break
+    return entry, sink
+
+
+def _sb_log(lines, container, msg, level="info"):
+    """Append a styled log line and refresh the console."""
+    prefix_map = {
+        "info":  '<span class="log-dim">[INFO]</span> ',
+        "ok":    '<span class="log-ok">[PASS]</span> ',
+        "fail":  '<span class="log-fail">[FAIL]</span> ',
+        "warn":  '<span class="log-warn">[WARN]</span> ',
+        "phase": '<span class="log-phase">[PHASE]</span> ',
+    }
+    ts = datetime.now().strftime("%H:%M:%S.") + f"{datetime.now().microsecond // 1000:03d}"
+    lines.append(f'<span class="log-dim">{ts}</span>  {prefix_map.get(level, "")}{html_module.escape(msg)}')
+    display = "\n".join(lines[-28:])
+    container.markdown(f'<div class="sandbox-console">{display}</div>', unsafe_allow_html=True)
+
+
+# ────────────────────────────────────────────────────────────────
+#  MAIN PAGE
+# ────────────────────────────────────────────────────────────────
+
+def render_sandbox_lab():
+    """Sandbox Verification Lab — scan, fix, and verify user-uploaded code."""
+
+    st.markdown("### 🧪 Sandbox Verification Lab")
+    st.markdown(
+        '<p style="color:#64748B;">Upload code files to scan for vulnerabilities, '
+        'auto-generate fixes, apply them in an isolated sandbox, and re-scan to verify. '
+        'All execution is local.</p>',
+        unsafe_allow_html=True,
+    )
+
+    if "sb_results" not in st.session_state:
+        st.session_state.sb_results = None
+
+    # ── file upload ─────────────────────────────────────────────
+    uploaded = st.file_uploader(
+        "Upload code files to test",
+        type=["py", "js", "ts", "java", "go", "rb", "php", "jsx", "tsx", "c", "cpp", "rs"],
+        accept_multiple_files=True,
+        key="sb_uploader",
+    )
+
+    if uploaded:
+        st.markdown(
+            '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">'
+            + ''.join(f'<span class="sb-file-tag">{html_module.escape(f.name)}</span>' for f in uploaded)
+            + '</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── launch bar ──────────────────────────────────────────────
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        run_btn = st.button(
+            "🚀  LAUNCH SANDBOX VERIFICATION",
+            use_container_width=True,
+            type="primary",
+            disabled=not uploaded,
+        )
+
+    if run_btn and uploaded:
+        st.session_state.sb_results = _execute_sandbox_on_user_code(uploaded)
+        st.rerun()
+
+    if st.session_state.sb_results is None:
+        st.info(
+            "Upload one or more code files, then press **Launch** to: "
+            "scan for vulnerabilities → auto-generate fixes → apply in sandbox → "
+            "re-scan to verify. All execution is local and isolated."
+        )
+        return
+
+    res = st.session_state.sb_results
+
+    # ── results tabs ────────────────────────────────────────────
+    tab_exec, tab_graph, tab_blast, tab_conf = st.tabs([
+        "📜  Execution Log",
+        "🗺️  Attack-Path Graph",
+        "💥  Blast Radius",
+        "🎯  Confidence",
+    ])
+    with tab_exec:
+        _render_execution_replay(res)
+    with tab_graph:
+        _render_dynamic_attack_graph(res)
+    with tab_blast:
+        _render_blast_radius_dynamic(res)
+    with tab_conf:
+        _render_confidence_panel_dynamic(res)
+
+
+# ────────────────────────────────────────────────────────────────
+#  LIVE SANDBOX EXECUTION ON USER CODE
+# ────────────────────────────────────────────────────────────────
+
+def _execute_sandbox_on_user_code(uploaded_files):
+    """Run the full Identify → Analyse → Verify → Remediate → Re-verify
+    pipeline on user-uploaded code.
+
+    Workflow:
+      Phase 0 — Sandbox setup
+      Phase 1 — Detection (pattern-based)
+      Phase 2 — Analysis (AST taint tracking → attack-path graph → reachability)
+      Phase 3 — Remediation (functional diffs only)
+      Phase 4 — Re-verification (re-analyse fixed code, compare paths)
+      Phase 5 — Summary
+    """
+    console = st.empty()
+    lines = []
+    progress = st.progress(0, text="Initializing sandbox…")
+    results = {
+        "files": {},
+        "totals_before": {"critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0},
+        "totals_after":  {"critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0},
+        "total_fixes": 0,
+        "total_functional_fixes": 0,
+        "total_rejected_fixes": 0,
+        "log_lines": [],
+    }
+
+    def log(msg, level="info"):
+        _sb_log(lines, console, msg, level)
+
+    # ── PHASE 0 — SETUP ────────────────────────────────────────
+    log("=" * 60, "phase")
+    log("PHASE 0 - Sandbox Environment Setup", "phase")
+    log("=" * 60, "phase")
+    time.sleep(0.2)
+
+    sandbox_dir = Path(tempfile.mkdtemp(prefix="llmcheck_sb_"))
+    log(f"Sandbox root: {sandbox_dir}")
+
+    file_data = {}
+    for uf in uploaded_files:
+        content = uf.read().decode('utf-8', errors='replace')
+        uf.seek(0)
+        fpath = sandbox_dir / uf.name
+        fpath.write_text(content)
+        file_data[uf.name] = {"content": content, "path": str(fpath)}
+        log(f"  Staged: {uf.name}  ({len(content.splitlines())} lines, {len(content)} bytes)")
+    time.sleep(0.15)
+
+    from src.ingestion.code_ingestion import CodeIngestion
+    from src.detectors.hardcoded_secrets_detector import HardcodedSecretsDetector
+    from src.detectors.prompt_injection_detector import PromptInjectionDetector
+    from src.detectors.overprivileged_tools_detector import OverprivilegedToolsDetector
+
+    ingestion = CodeIngestion(max_file_size_mb=10)
+    detectors = [
+        HardcodedSecretsDetector(enabled=True),
+        PromptInjectionDetector(enabled=True),
+        OverprivilegedToolsDetector(enabled=True),
+    ]
+    taint_tracker = TaintTracker()
+    reachability_verifier = ReachabilityVerifier()
+    remediator = FunctionalRemediator()
+
+    log("Loaded: CodeIngestion + 3 detectors + taint tracker + reachability verifier", "ok")
+    progress.progress(8, text="Sandbox ready")
+
+    # ── PHASE 1 — DETECTION ────────────────────────────────────
+    log("", "info")
+    log("=" * 60, "phase")
+    log("PHASE 1 - Detection (pattern-based)", "phase")
+    log("=" * 60, "phase")
+    time.sleep(0.15)
+
+    all_before = {}
+    all_findings_objs_before = {}  # keep Finding objects for analysis
+    step = 0
+    total_steps = len(file_data)
+    for fname, fdata in file_data.items():
+        step += 1
+        log(f"  [{step}/{total_steps}] Scanning: {fname}", "phase")
+        fd = ingestion.ingest_file(fdata["path"])
+        findings = []
+        for det in detectors:
+            hits = det.detect(fd['code_content'], fd['language'], fd['file_name'])
+            if hits:
+                log(f"    {det.name}: {len(hits)} finding(s)", "warn")
+                findings.extend(hits)
+            else:
+                log(f"    {det.name}: clean", "ok")
+            time.sleep(0.06)
+
+        all_findings_objs_before[fname] = findings
+        flist = [x.to_dict() for x in findings]
+        all_before[fname] = flist
+        for item in flist:
+            sev = item.get('severity', 'MEDIUM').lower()
+            results["totals_before"][sev] = results["totals_before"].get(sev, 0) + 1
+            results["totals_before"]["total"] += 1
+
+    tb = results["totals_before"]["total"]
+    log(f"  TOTAL: {tb} vulnerabilities across {len(file_data)} file(s)",
+        "fail" if tb > 0 else "ok")
+    progress.progress(25, text=f"Found {tb} vulnerabilities")
+
+    # NOTE: Do NOT short-circuit here. Pattern detectors may find 0
+    # issues (e.g. SQL injection, XSS, path traversal are NOT detected
+    # by pattern rules).  The AST taint-analysis pipeline in Phase 2
+    # is the primary detection mechanism for those vulnerability classes.
+
+    # ── PHASE 2 — ANALYSIS (taint → graph → reachability) ─────
+    log("", "info")
+    log("=" * 60, "phase")
+    log("PHASE 2 - Static Analysis (taint tracking, attack graphs, reachability)", "phase")
+    log("=" * 60, "phase")
+    time.sleep(0.15)
+
+    attack_paths_before_all = {}
+    reach_results_before_all = {}
+
+    for fname, fdata in file_data.items():
+        fd = ingestion.ingest_file(fdata["path"])
+        lang = fd.get('language', '')
+        attack_paths = []
+        reach_results = []
+
+        if lang == 'python':
+            log(f"  [{fname}] Running AST taint analysis...", "info")
+            nodes, edges = taint_tracker.analyse(fname, fdata["content"])
+            if nodes:
+                graph = AttackGraph()
+                graph.add_nodes_and_edges(nodes, edges)
+                attack_paths = graph.enumerate_attack_paths()
+                log(f"    Graph: {graph.node_count} nodes, {graph.edge_count} edges, "
+                    f"{len(attack_paths)} attack paths", "ok")
+
+                reach_results = reachability_verifier.verify_paths(
+                    attack_paths, fdata["content"], fname
+                )
+                # Log reachability summary
+                status_counts = {}
+                for r in reach_results:
+                    s = r.status.value
+                    status_counts[s] = status_counts.get(s, 0) + 1
+                for status, count in status_counts.items():
+                    lvl = "fail" if status == "Confirmed Reachable" else "ok"
+                    log(f"    {status}: {count}", lvl)
+
+                # Enrich pattern findings with analysis data,
+                # or CREATE new findings when the AST pipeline detects
+                # paths that pattern detectors missed entirely.
+                for rr in reach_results:
+                    sink_line = rr.path.sink.line
+                    matched = False
+                    for fd_item in all_before.get(fname, []):
+                        if fd_item.get('line_number') == sink_line:
+                            fd_item['reachability_status'] = rr.status.value
+                            fd_item['reachability_reasoning'] = rr.reasoning
+                            fd_item['attack_path'] = rr.path.to_dict()
+                            fd_item['sink_api'] = rr.path.sink.name
+                            # Upgrade classification if library-accurate
+                            sink_info = SinkClassifier.classify(rr.path.sink.name)
+                            if sink_info:
+                                fd_item['vulnerability_type'] = sink_info.vulnerability_type
+                                fd_item['severity'] = sink_info.severity
+                                fd_item['cwe_id'] = sink_info.cwe_id
+                            matched = True
+                            break
+
+                    if not matched:
+                        # No pattern finding on this sink line — create
+                        # a new finding from AST analysis.
+                        sink_info = SinkClassifier.classify(rr.path.sink.name)
+                        new_item = {
+                            'detector_name': 'StaticAnalysisPipeline',
+                            'vulnerability_type': rr.path.vulnerability_type,
+                            'severity': rr.path.severity,
+                            'line_number': sink_line,
+                            'code_snippet': rr.path.sink.detail,
+                            'description': (
+                                f"Tainted data from {rr.path.source.name} "
+                                f"(line {rr.path.source.line}) reaches "
+                                f"{rr.path.sink.name}() at line {sink_line}."
+                            ),
+                            'confidence': 0.9,
+                            'cwe_id': rr.path.cwe_id if hasattr(rr.path, 'cwe_id') else '',
+                            'reachability_status': rr.status.value,
+                            'reachability_reasoning': rr.reasoning,
+                            'attack_path': rr.path.to_dict(),
+                            'sink_api': rr.path.sink.name,
+                        }
+                        if sink_info:
+                            new_item['vulnerability_type'] = sink_info.vulnerability_type
+                            new_item['severity'] = sink_info.severity
+                            new_item['cwe_id'] = sink_info.cwe_id
+                        all_before.setdefault(fname, []).append(new_item)
+                        # Update totals
+                        sev = new_item['severity'].lower()
+                        results["totals_before"][sev] = results["totals_before"].get(sev, 0) + 1
+                        results["totals_before"]["total"] += 1
+                        log(f"    AST finding: L{sink_line} {new_item['vulnerability_type']} "
+                            f"({rr.status.value})", "fail")
+            else:
+                log(f"    No taint nodes found - pattern results only", "info")
+        else:
+            log(f"  [{fname}] AST analysis not supported for {lang} - pattern results only", "info")
+
+        attack_paths_before_all[fname] = attack_paths
+        reach_results_before_all[fname] = reach_results
+        time.sleep(0.06)
+
+    # Recalculate totals after Phase 2 AST enrichment
+    tb = results["totals_before"]["total"]
+    log(f"  TOTAL after analysis: {tb} vulnerabilities across {len(file_data)} file(s)",
+        "fail" if tb > 0 else "ok")
+    progress.progress(40, text="Analysis complete")
+
+    # Short-circuit AFTER AST analysis if still nothing found
+    if tb == 0:
+        log("", "info")
+        log("No vulnerabilities detected by pattern or AST analysis.", "ok")
+        for fname in file_data:
+            results["files"][fname] = {
+                "findings_before": [], "findings_after": [], "fixes": [],
+                "original_code": file_data[fname]["content"],
+                "fixed_code": file_data[fname]["content"],
+                "attack_paths_before": [p.to_dict() for p in attack_paths_before_all.get(fname, [])],
+                "attack_paths_after": [],
+                "reachability_before": [r.to_dict() for r in reach_results_before_all.get(fname, [])],
+                "reachability_after": [],
+            }
+        results["log_lines"] = lines
+        progress.progress(100, text="Done - no issues found")
+        time.sleep(0.4)
+        progress.empty()
+        import shutil
+        shutil.rmtree(sandbox_dir, ignore_errors=True)
+        return results
+
+    # ── PHASE 3 — FUNCTIONAL REMEDIATION ──────────────────────
+    log("", "info")
+    log("=" * 60, "phase")
+    log("PHASE 3 - Functional Remediation (code changes only, no comment-only fixes)", "phase")
+    log("=" * 60, "phase")
+    time.sleep(0.15)
+
+    fixed_files = {}
+    total_fixes = 0
+    total_functional = 0
+    total_rejected = 0
+    for fname, reach_results in reach_results_before_all.items():
+        original = file_data[fname]["content"]
+
+        if not reach_results:
+            # No analysis-backed paths — fall back to empty
+            fixed_files[fname] = {"code": original, "fixes": []}
+            log(f"  {fname}: no verified attack paths - no fixes to apply", "info")
+            continue
+
+        log(f"  [{fname}] Applying functional fixes for {len(reach_results)} paths...", "phase")
+        fixed_code, diffs = remediator.remediate(original, reach_results)
+        fix_dicts = [d.to_dict() for d in diffs]
+        fixed_files[fname] = {"code": fixed_code, "fixes": fix_dicts}
+
+        for d in diffs:
+            if d.is_functional:
+                total_functional += 1
+                log(f"    L{d.line_number}: {d.description}", "ok")
+            else:
+                total_rejected += 1
+                reason = d.rejection_reason or "No automated fix"
+                log(f"    L{d.line_number}: REJECTED - {reason}", "warn")
+            time.sleep(0.05)
+
+    # Also handle files that only had pattern findings (no AST paths)
+    for fname in file_data:
+        if fname not in fixed_files:
+            fixed_files[fname] = {"code": file_data[fname]["content"], "fixes": []}
+
+    total_fixes = total_functional
+    results["total_fixes"] = total_fixes
+    results["total_functional_fixes"] = total_functional
+    results["total_rejected_fixes"] = total_rejected
+    log(f"  {total_functional} functional fix(es) applied, {total_rejected} rejected", "ok")
+    progress.progress(60, text="Remediation complete")
+
+    # ── PHASE 4 — RE-VERIFICATION ─────────────────────────────
+    log("", "info")
+    log("=" * 60, "phase")
+    log("PHASE 4 - Re-verification (re-analyse fixed code, compare attack paths)", "phase")
+    log("=" * 60, "phase")
+    time.sleep(0.15)
+
+    all_after = {}
+    attack_paths_after_all = {}
+    reach_results_after_all = {}
+
+    for fname, fdata_fixed in fixed_files.items():
+        fixed_path = sandbox_dir / f"fixed_{fname}"
+        fixed_path.write_text(fdata_fixed["code"])
+
+        fd = ingestion.ingest_file(str(fixed_path))
+
+        # Re-run pattern detectors
+        findings = []
+        for det in detectors:
+            findings.extend(det.detect(fd['code_content'], fd['language'], fd['file_name']))
+        flist = [x.to_dict() for x in findings]
+        all_after[fname] = flist
+        for item in flist:
+            sev = item.get('severity', 'MEDIUM').lower()
+            results["totals_after"][sev] = results["totals_after"].get(sev, 0) + 1
+            results["totals_after"]["total"] += 1
+
+        # Re-run taint analysis on fixed code
+        attack_paths_after = []
+        reach_results_after = []
+        if fd.get('language') == 'python':
+            nodes, edges = taint_tracker.analyse(f"fixed_{fname}", fdata_fixed["code"])
+            if nodes:
+                graph = AttackGraph()
+                graph.add_nodes_and_edges(nodes, edges)
+                attack_paths_after = graph.enumerate_attack_paths()
+                reach_results_after = reachability_verifier.verify_paths(
+                    attack_paths_after, fdata_fixed["code"], fname
+                )
+                # Add AST-derived findings to after-totals (same logic as Phase 2)
+                for rr in reach_results_after:
+                    sink_line = rr.path.sink.line
+                    already = any(
+                        fi.get('line_number') == sink_line
+                        for fi in all_after.get(fname, [])
+                    )
+                    if not already:
+                        sink_info = SinkClassifier.classify(rr.path.sink.name)
+                        new_item = {
+                            'detector_name': 'StaticAnalysisPipeline',
+                            'vulnerability_type': (sink_info.vulnerability_type
+                                                   if sink_info else rr.path.vulnerability_type),
+                            'severity': (sink_info.severity
+                                         if sink_info else rr.path.severity),
+                            'line_number': sink_line,
+                            'code_snippet': rr.path.sink.detail,
+                            'description': (
+                                f"Tainted data from {rr.path.source.name} "
+                                f"(line {rr.path.source.line}) reaches "
+                                f"{rr.path.sink.name}() at line {sink_line}."
+                            ),
+                            'confidence': 0.9,
+                            'cwe_id': (sink_info.cwe_id if sink_info else ''),
+                            'reachability_status': rr.status.value,
+                            'reachability_reasoning': rr.reasoning,
+                            'attack_path': rr.path.to_dict(),
+                            'sink_api': rr.path.sink.name,
+                        }
+                        all_after.setdefault(fname, []).append(new_item)
+                        sev = new_item['severity'].lower()
+                        results["totals_after"][sev] = results["totals_after"].get(sev, 0) + 1
+                        results["totals_after"]["total"] += 1
+
+        attack_paths_after_all[fname] = attack_paths_after
+        reach_results_after_all[fname] = reach_results_after
+
+        # Compare attack paths
+        before_paths = attack_paths_before_all.get(fname, [])
+        comparison = AttackGraph.compare(before_paths, attack_paths_after)
+        elim = len(comparison["eliminated"])
+        remain = len(comparison["remaining"])
+        introduced = len(comparison["introduced"])
+
+        if elim > 0:
+            log(f"  {fname}: {elim} attack path(s) eliminated, {remain} remaining", "ok")
+        if introduced > 0:
+            log(f"  {fname}: {introduced} new path(s) introduced (side effect)", "warn")
+        if remain > 0 and elim == 0:
+            log(f"  {fname}: {remain} path(s) still present", "warn")
+        if remain == 0 and elim > 0:
+            log(f"  {fname}: all attack paths eliminated", "ok")
+
+        time.sleep(0.06)
+
+    ta = results["totals_after"]["total"]
+    log(f"  TOTAL remaining: {ta}  (was {tb})", "ok" if ta < tb else "warn")
+    progress.progress(85, text="Re-verification complete")
+
+    # ── PHASE 5 — SUMMARY ──────────────────────────────────────
+    log("", "info")
+    log("=" * 60, "phase")
+    log("SANDBOX VERIFICATION COMPLETE", "phase")
+    log("=" * 60, "phase")
+    reduction = ((tb - ta) / tb * 100) if tb > 0 else 0
+    log(f"  Vulnerabilities before:     {tb}")
+    log(f"  Vulnerabilities after:      {ta}")
+    log(f"  Functional fixes applied:   {total_functional}")
+    log(f"  Non-functional rejected:    {total_rejected}")
+    log(f"  Reachability reduction:     {reduction:.1f}%")
+
+    import shutil
+    shutil.rmtree(sandbox_dir, ignore_errors=True)
+    progress.progress(100, text="Done")
+    time.sleep(0.4)
+    progress.empty()
+
+    # assemble result data
+    for fname in file_data:
+        before_paths = attack_paths_before_all.get(fname, [])
+        after_paths = attack_paths_after_all.get(fname, [])
+        before_reach = reach_results_before_all.get(fname, [])
+        after_reach = reach_results_after_all.get(fname, [])
+
+        results["files"][fname] = {
+            "findings_before": all_before.get(fname, []),
+            "findings_after":  all_after.get(fname, []),
+            "fixes":           fixed_files.get(fname, {}).get("fixes", []),
+            "original_code":   file_data[fname]["content"],
+            "fixed_code":      fixed_files.get(fname, {}).get("code", ""),
+            "attack_paths_before": [p.to_dict() for p in before_paths],
+            "attack_paths_after":  [p.to_dict() for p in after_paths],
+            "reachability_before": [r.to_dict() for r in before_reach],
+            "reachability_after":  [r.to_dict() for r in after_reach],
+        }
+    results["log_lines"] = lines
+    return results
+
+
+# ────────────────────────────────────────────────────────────────
+#  TAB 1 — EXECUTION LOG
+# ────────────────────────────────────────────────────────────────
+
+def _render_execution_replay(res):
+    """Render stored log + per-file result cards with code comparison."""
+
+    # full console
+    st.markdown("#### Terminal Output")
+    display = "\n".join(res.get("log_lines", []))
+    st.markdown(
+        f'<div class="sandbox-console" style="max-height:520px;">{display}</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    # per-file details
+    for fname, fdata in res["files"].items():
+        nb = len(fdata["findings_before"])
+        na = len(fdata["findings_after"])
+        fixes = fdata.get("fixes", [])
+        nf_func = sum(1 for f in fixes if f.get("is_functional", False))
+        nf_rej = sum(1 for f in fixes if not f.get("is_functional", True))
+
+        with st.expander(
+            f"**{fname}** -- {nb} findings, {nf_func} functional fix(es), {na} remaining",
+            expanded=(nb > 0),
+        ):
+            if nb == 0:
+                st.success("No vulnerabilities found in this file.")
+                continue
+
+            # --- findings table with reachability status ---
+            st.markdown("##### Findings (before remediation)")
+            sev_colors = {
+                "CRITICAL": "#DC2626", "HIGH": "#EA580C",
+                "MEDIUM": "#EAB308", "LOW": "#3B82F6",
+            }
+            reach_colors = {
+                "Confirmed Reachable": "#DC2626",
+                "Reachability Eliminated": "#10B981",
+                "Unverifiable": "#F59E0B",
+                "Requires Manual Review": "#EA580C",
+            }
+            for f in fdata["findings_before"]:
+                sev = f.get('severity', 'MEDIUM')
+                sc = sev_colors.get(sev, "#64748B")
+                entry, sink = _classify_finding(f)
+                reach_status = f.get('reachability_status', '')
+                rc = reach_colors.get(reach_status, "#64748B")
+                reach_badge = (
+                    f'<span style="color:{rc};font-weight:600;font-size:10px;">'
+                    f'[{html_module.escape(reach_status)}]</span> '
+                ) if reach_status else ''
+
+                # Attack path line
+                apath = f.get('attack_path')
+                path_html = ''
+                if apath:
+                    src = apath.get('source', {})
+                    sink_p = apath.get('sink', {})
+                    xforms = apath.get('transforms', [])
+                    chain = f"{html_module.escape(src.get('name','?'))}"
+                    for t in xforms:
+                        chain += f" -> {html_module.escape(t.get('name','?'))}"
+                    chain += f" -> {html_module.escape(sink_p.get('name','?'))}"
+                    path_html = (
+                        f'<br/><span style="color:#475569;font-size:10px;">'
+                        f'Path: {chain}</span>'
+                    )
+                else:
+                    path_html = (
+                        f'<br/><span style="color:#475569;font-size:10px;">'
+                        f'Path: {html_module.escape(entry)} -> '
+                        f'<span class="sb-file-tag">{html_module.escape(fname)}</span> -> '
+                        f'{html_module.escape(sink)}</span>'
+                    )
+
+                st.markdown(
+                    f'<div style="padding:6px 10px;margin:3px 0;background:#0B1120;'
+                    f'border-left:3px solid {sc};border-radius:0 4px 4px 0;font-size:12px;">'
+                    f'<span style="color:{sc};font-weight:700;">{html_module.escape(sev)}</span> '
+                    f'{reach_badge}'
+                    f'<span style="color:#E2E8F0;">{html_module.escape(f.get("vulnerability_type",""))}</span> '
+                    f'<span style="color:#64748B;"> -- Line {f.get("line_number","?")}</span>'
+                    f'{" -- Sink: " + html_module.escape(f.get("sink_api","")) if f.get("sink_api") else ""}'
+                    f'<br/>'
+                    f'<span style="color:#94A3B8;font-size:11px;">'
+                    f'{html_module.escape(f.get("description","")[:200])}</span>'
+                    f'{path_html}</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # --- fixes applied (functional diffs only) ---
+            if fixes:
+                st.markdown("##### Remediation Diffs")
+                for fix in fixes:
+                    is_func = fix.get("is_functional", False)
+                    if is_func:
+                        st.markdown(
+                            f'**Line {fix.get("line_number", "?")}** '
+                            f'`{html_module.escape(fix.get("vulnerability_type",""))}` -- '
+                            f'{html_module.escape(fix.get("description",""))}'
+                        )
+                    else:
+                        reason = fix.get("rejection_reason", "Non-functional change")
+                        st.markdown(
+                            f'**Line {fix.get("line_number", "?")}** '
+                            f'REJECTED -- {html_module.escape(reason)}'
+                        )
+
+            # --- code comparison ---
+            st.markdown("##### Code Comparison (before -> after)")
+            lang = fname.rsplit('.', 1)[-1] if '.' in fname else 'text'
+            lang_map = {"py": "python", "js": "javascript", "ts": "typescript",
+                        "rb": "ruby", "rs": "rust", "go": "go", "java": "java",
+                        "php": "php", "c": "c", "cpp": "cpp"}
+            lang = lang_map.get(lang, lang)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("*Original:*")
+                st.code(fdata["original_code"][:6000], language=lang)
+            with col2:
+                st.markdown("*Remediated:*")
+                st.code(fdata["fixed_code"][:6000], language=lang)
+
+            # --- re-verification result ---
+            if na == 0 and nb > 0:
+                st.success(f"All {nb} attack paths eliminated after remediation.")
+            elif na < nb:
+                st.warning(
+                    f"Reachability reduced: {nb - na} path(s) eliminated, "
+                    f"{na} remaining -- manual review needed."
+                )
+            elif na == nb:
+                st.error(f"All {na} findings persist -- manual remediation required.")
+
+
+# ────────────────────────────────────────────────────────────────
+#  TAB 2 — DYNAMIC ATTACK-PATH GRAPH
+# ────────────────────────────────────────────────────────────────
+
+def _render_dynamic_attack_graph(res):
+    """Build a Sankey diagram from attack-path graph data (real data flow)
+    with fallback to pattern-based classification."""
+    from collections import Counter
+
+    st.markdown("#### Attack-Path Flow -- Before vs After Remediation")
+
+    # Collect (source, file, sink) triples from attack-path data or findings
+    paths_before = []
+    paths_after = []
+    for fname, fdata in res["files"].items():
+        # Prefer real attack-path data from the analysis pipeline
+        for ap in fdata.get("attack_paths_before", []):
+            src_name = ap.get("source", {}).get("name", "Input")
+            sink_name = ap.get("sink", {}).get("name", "Sensitive Operation")
+            # Use library-accurate classification
+            info = SinkClassifier.classify(sink_name)
+            sink_label = info.vulnerability_type if info else sink_name
+            paths_before.append((src_name, fname, sink_label))
+        for ap in fdata.get("attack_paths_after", []):
+            src_name = ap.get("source", {}).get("name", "Input")
+            sink_name = ap.get("sink", {}).get("name", "Sensitive Operation")
+            info = SinkClassifier.classify(sink_name)
+            sink_label = info.vulnerability_type if info else sink_name
+            paths_after.append((src_name, fname, sink_label))
+
+        # Fallback: if no attack-path data, use pattern findings
+        if not fdata.get("attack_paths_before"):
+            for f in fdata["findings_before"]:
+                entry, sink = _classify_finding(f)
+                paths_before.append((entry, fname, sink))
+        if not fdata.get("attack_paths_after"):
+            for f in fdata["findings_after"]:
+                entry, sink = _classify_finding(f)
+                paths_after.append((entry, fname, sink))
+
+    if not paths_before:
+        st.success("No attack paths found -- uploaded code appears clean.")
+        return
+
+    mode = st.radio("View", ["Before Remediation", "After Remediation"],
+                    horizontal=True, key="sb_graph_mode")
+    is_after = mode == "After Remediation"
+
+    # build unique node lists: sources | files | sinks
+    entries = sorted(set(p[0] for p in paths_before))
+    files   = sorted(set(p[1] for p in paths_before))
+    sinks   = sorted(set(p[2] for p in paths_before))
+
+    labels = entries + files + sinks
+    n_e = len(entries)
+    n_f = len(files)
+    entry_idx = {e: i for i, e in enumerate(entries)}
+    file_idx  = {f: i + n_e for i, f in enumerate(files)}
+    sink_idx  = {s: i + n_e + n_f for i, s in enumerate(sinks)}
+
+    node_colors = (
+        ["#4338CA"] * n_e +   # source -- indigo
+        ["#0369A1"] * n_f +   # file   -- blue
+        ["#9F1239"] * len(sinks)  # sink -- rose
+    )
+
+    src, tgt, vals, colors = [], [], [], []
+
+    if not is_after:
+        edge_counts = Counter()
+        for entry, fname, sink in paths_before:
+            edge_counts[(entry_idx[entry], file_idx[fname])] += 1
+            edge_counts[(file_idx[fname], sink_idx[sink])] += 1
+        for (s, t), v in edge_counts.items():
+            src.append(s); tgt.append(t); vals.append(v)
+            colors.append("rgba(220,38,38,0.45)")
+    else:
+        before_counts = Counter()
+        for entry, fname, sink in paths_before:
+            before_counts[(entry_idx[entry], file_idx[fname])] += 1
+            before_counts[(file_idx[fname], sink_idx[sink])] += 1
+        after_counts = Counter()
+        for entry, fname, sink in paths_after:
+            after_counts[(entry_idx.get(entry, 0), file_idx.get(fname, 0))] += 1
+            after_counts[(file_idx.get(fname, 0), sink_idx.get(sink, 0))] += 1
+
+        for (s, t), v in before_counts.items():
+            remaining = after_counts.get((s, t), 0)
+            eliminated = v - remaining
+            if remaining > 0:
+                src.append(s); tgt.append(t); vals.append(remaining)
+                colors.append("rgba(220,38,38,0.45)")
+            if eliminated > 0:
+                src.append(s); tgt.append(t); vals.append(eliminated)
+                colors.append("rgba(16,185,129,0.22)")
+
+    fig = go.Figure(go.Sankey(
+        arrangement="snap",
+        node=dict(
+            pad=18, thickness=22, label=labels,
+            color=node_colors, line=dict(color="#1E293B", width=1),
+        ),
+        link=dict(source=src, target=tgt, value=vals, color=colors),
+    ))
+    fig.update_layout(
+        paper_bgcolor="#020617", plot_bgcolor="#020617",
+        font=dict(color="#94A3B8", size=12),
+        height=max(360, 120 + 50 * n_f),
+        margin=dict(l=10, r=10, t=35, b=10),
+        title=dict(
+            text=f"Attack Paths -- {'After' if is_after else 'Before'} Remediation",
+            font=dict(size=14, color="#94A3B8"),
+        ),
+    )
+    st.plotly_chart(fig, use_container_width=True, key=f"sankey_{mode}")
+
+    # legend
+    st.markdown("""
+    <div style="display:flex;gap:20px;justify-content:center;margin-top:8px;font-size:12px;color:#64748B;">
+        <span><span style="display:inline-block;width:14px;height:14px;background:rgba(220,38,38,0.5);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Confirmed Reachable</span>
+        <span><span style="display:inline-block;width:14px;height:14px;background:rgba(16,185,129,0.3);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Reachability Eliminated</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # detail table — attack path detail with reachability status
+    st.markdown("---")
+    st.markdown("#### Attack Path Detail")
+    for fname, fdata in res["files"].items():
+        # Show real attack paths first
+        reach_data = fdata.get("reachability_before", [])
+        if reach_data:
+            for rd in reach_data:
+                path_info = rd.get("path", {})
+                status = rd.get("status", "")
+                src_info = path_info.get("source", {})
+                sink_info = path_info.get("sink", {})
+                transforms = path_info.get("transforms", [])
+
+                chain = html_module.escape(src_info.get("name", "?"))
+                for t in transforms:
+                    chain += f' -> {html_module.escape(t.get("name", "?"))}'
+                chain += f' -> {html_module.escape(sink_info.get("name", "?"))}'
+
+                badge_key = {
+                    "Confirmed Reachable": "vulnerable",
+                    "Reachability Eliminated": "fixed",
+                    "Unverifiable": "partial",
+                    "Requires Manual Review": "manual",
+                }.get(status, "partial")
+                badge = STATUS_BADGE.get(badge_key, "")
+
+                st.markdown(
+                    f'<div class="sb-path-row">'
+                    f'<span class="sb-path-id">'
+                    f'{html_module.escape(path_info.get("severity",""))}</span>'
+                    f'<span class="sb-path-name">{chain}'
+                    f' <span class="sb-file-tag">{html_module.escape(fname)}'
+                    f':{sink_info.get("line","?")}</span></span>'
+                    f'<span style="min-width:180px;text-align:right;">{badge}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            # Fallback to pattern-based findings
+            for f in fdata.get("findings_before", []):
+                entry, sink = _classify_finding(f)
+                fixed = not any(
+                    af.get('vulnerability_type') == f.get('vulnerability_type')
+                    and af.get('line_number') == f.get('line_number')
+                    for af in fdata.get("findings_after", [])
+                )
+                badge = STATUS_BADGE["fixed"] if fixed else STATUS_BADGE["vulnerable"]
+                st.markdown(
+                    f'<div class="sb-path-row">'
+                    f'<span class="sb-path-id">'
+                    f'{html_module.escape(f.get("severity",""))}</span>'
+                    f'<span class="sb-path-name">{html_module.escape(entry)} -> '
+                    f'<span class="sb-file-tag">{html_module.escape(fname)}'
+                    f':{f.get("line_number","?")}</span> -> '
+                    f'{html_module.escape(sink)}</span>'
+                    f'<span style="min-width:180px;text-align:right;">{badge}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+
+# ────────────────────────────────────────────────────────────────
+#  TAB 3 — BLAST RADIUS
+# ────────────────────────────────────────────────────────────────
+
+def _render_blast_radius_dynamic(res):
+    """Quantify the before / after reduction in the user's code."""
+
+    st.markdown("#### Blast Radius Reduction")
+    st.markdown(
+        '<p style="color:#64748B;">How much of the uploaded code\'s attack surface '
+        'was reduced by automated remediation.</p>',
+        unsafe_allow_html=True,
+    )
+
+    tb = res["totals_before"]["total"]
+    ta = res["totals_after"]["total"]
+    nf = res["total_fixes"]
+    reduction = ((tb - ta) / tb * 100) if tb > 0 else 0
+
+    # metrics row
+    render_metrics_grid([
+        {"title": "Before", "value": str(tb), "subtext": "Total vulnerabilities",
+         "icon": "🔓", "color": "#DC2626"},
+        {"title": "Fixes Applied", "value": str(nf), "subtext": "Auto-remediated",
+         "icon": "🔧", "color": "#6366F1"},
+        {"title": "After", "value": str(ta), "subtext": "Remaining issues",
+         "icon": "🛡️", "color": "#10B981" if ta < tb else "#F59E0B"},
+        {"title": "Reduction", "value": f"{reduction:.0f}%",
+         "subtext": "Vulnerability decrease", "icon": "📉", "color": "#10B981"},
+    ])
+
+    st.markdown("---")
+
+    # ── severity breakdown bar chart ────────────────────────────
+    st.markdown("##### By Severity")
+    sevs = ["critical", "high", "medium", "low"]
+    sev_colors = {"critical": "#DC2626", "high": "#EA580C",
+                  "medium": "#EAB308", "low": "#3B82F6"}
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name="Before", x=[s.title() for s in sevs],
+        y=[res["totals_before"].get(s, 0) for s in sevs],
+        marker_color=[sev_colors[s] for s in sevs], opacity=0.85,
+    ))
+    fig.add_trace(go.Bar(
+        name="After", x=[s.title() for s in sevs],
+        y=[res["totals_after"].get(s, 0) for s in sevs],
+        marker_color=[sev_colors[s] for s in sevs], opacity=0.35,
+    ))
+    fig.update_layout(
+        barmode='group',
+        paper_bgcolor="#0B1120", plot_bgcolor="#0B1120",
+        font=dict(color="#94A3B8"), height=320,
+        margin=dict(l=40, r=20, t=30, b=40),
+        legend=dict(orientation="h", y=1.12),
+        yaxis=dict(gridcolor="#1E293B"),
+    )
+    st.plotly_chart(fig, use_container_width=True, key="sev_bars")
+
+    # ── type breakdown bar chart ────────────────────────────────
+    from collections import Counter
+    types_b = Counter()
+    types_a = Counter()
+    for fdata in res["files"].values():
+        for f in fdata["findings_before"]:
+            types_b[f.get("vulnerability_type", "Unknown")] += 1
+        for f in fdata["findings_after"]:
+            types_a[f.get("vulnerability_type", "Unknown")] += 1
+
+    if types_b:
+        st.markdown("##### By Vulnerability Type")
+        all_types = sorted(types_b.keys())
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(
+            name="Before", x=all_types,
+            y=[types_b[t] for t in all_types],
+            marker_color="#DC2626", opacity=0.85,
+        ))
+        fig2.add_trace(go.Bar(
+            name="After", x=all_types,
+            y=[types_a.get(t, 0) for t in all_types],
+            marker_color="#10B981", opacity=0.7,
+        ))
+        fig2.update_layout(
+            barmode='group',
+            paper_bgcolor="#0B1120", plot_bgcolor="#0B1120",
+            font=dict(color="#94A3B8", size=11), height=320,
+            margin=dict(l=40, r=20, t=30, b=100),
+            legend=dict(orientation="h", y=1.12),
+            xaxis=dict(tickangle=-30),
+            yaxis=dict(gridcolor="#1E293B"),
+        )
+        st.plotly_chart(fig2, use_container_width=True, key="type_bars")
+
+    # ── donut summary ───────────────────────────────────────────
+    if tb > 0:
+        eliminated = tb - ta
+        fig3 = go.Figure(go.Pie(
+            labels=["Fixed", "Remaining"],
+            values=[eliminated, ta],
+            hole=0.6,
+            marker=dict(colors=["#10B981", "#DC2626"]),
+            textinfo="label+value",
+            textfont=dict(color="white", size=13),
+        ))
+        fig3.update_layout(
+            paper_bgcolor="#0B1120", plot_bgcolor="#0B1120",
+            font=dict(color="#94A3B8"), height=300,
+            margin=dict(l=20, r=20, t=10, b=20),
+            showlegend=False,
+            annotations=[dict(
+                text=f"{reduction:.0f}%<br>fixed",
+                x=0.5, y=0.5,
+                font=dict(size=22, color="white"), showarrow=False,
+            )],
+        )
+        st.plotly_chart(fig3, use_container_width=True, key="donut_blast")
+
+
+# ────────────────────────────────────────────────────────────────
+#  TAB 4 — CONFIDENCE PANEL
+# ────────────────────────────────────────────────────────────────
+
+def _render_confidence_panel_dynamic(res):
+    """Trust-gradient classification panel using reachability analysis."""
+
+    st.markdown("#### Trust-Gradient Classification")
+    st.markdown(
+        '<p style="color:#64748B;">Each vulnerability path is classified by '
+        'static reachability analysis. These are evidence-based verdicts, '
+        'not exploit simulations.</p>',
+        unsafe_allow_html=True,
+    )
+
+    confirmed_reachable = []
+    reachability_eliminated = []
+    unverifiable = []
+    manual_review = []
+    side_effects = []
+
+    for fname, fdata in res["files"].items():
+        # Prefer reachability data from the analysis pipeline
+        reach_before = fdata.get("reachability_before", [])
+        reach_after = fdata.get("reachability_after", [])
+
+        if reach_before:
+            # Use analysis-pipeline classifications
+            after_keys = set()
+            for ra in reach_after:
+                p = ra.get("path", {})
+                after_keys.add((
+                    p.get("source", {}).get("name"),
+                    p.get("sink", {}).get("name"),
+                    p.get("sink", {}).get("line"),
+                ))
+
+            for rb in reach_before:
+                p = rb.get("path", {})
+                status = rb.get("status", "")
+                src_name = p.get("source", {}).get("name", "?")
+                sink_name = p.get("sink", {}).get("name", "?")
+                sink_line = p.get("sink", {}).get("line", "?")
+                label = (f"{fname}:{sink_line} -- "
+                         f"{src_name} -> {sink_name}  "
+                         f"[{p.get('severity','?')}]")
+
+                key = (src_name, sink_name, sink_line)
+                path_eliminated = key not in after_keys
+
+                if path_eliminated:
+                    reachability_eliminated.append(
+                        label + "  (path no longer exists after remediation)")
+                elif status == "Confirmed Reachable":
+                    confirmed_reachable.append(label)
+                elif status == "Reachability Eliminated":
+                    reachability_eliminated.append(label)
+                elif status == "Unverifiable":
+                    unverifiable.append(label)
+                elif status == "Requires Manual Review":
+                    manual_review.append(label)
+
+            # Check for new paths introduced by fixes
+            before_keys = set()
+            for rb in reach_before:
+                p = rb.get("path", {})
+                before_keys.add((
+                    p.get("source", {}).get("name"),
+                    p.get("sink", {}).get("name"),
+                    p.get("sink", {}).get("line"),
+                ))
+            for ra in reach_after:
+                p = ra.get("path", {})
+                key = (
+                    p.get("source", {}).get("name"),
+                    p.get("sink", {}).get("name"),
+                    p.get("sink", {}).get("line"),
+                )
+                if key not in before_keys:
+                    side_effects.append(
+                        f"{fname}:{p.get('sink',{}).get('line','?')} -- "
+                        f"new path: {key[0]} -> {key[1]}  (introduced by fix)"
+                    )
+        else:
+            # Fallback: re-scan comparison for pattern-only findings
+            after_keys = {
+                (f.get('vulnerability_type'), f.get('line_number'))
+                for f in fdata.get("findings_after", [])
+            }
+            fix_lines = {
+                fix.get('line_number', fix.get('line', 0))
+                for fix in fdata.get("fixes", [])
+                if fix.get("is_functional", True)
+            }
+
+            for f in fdata.get("findings_before", []):
+                key = (f.get('vulnerability_type'), f.get('line_number'))
+                ln = f.get('line_number', 0)
+                label = (f"{fname}:{ln} -- "
+                         f"{f.get('vulnerability_type','')}  "
+                         f"[{f.get('severity','?')}]")
+
+                reach_status = f.get('reachability_status', '')
+                if key not in after_keys:
+                    reachability_eliminated.append(label)
+                elif reach_status == "Confirmed Reachable":
+                    confirmed_reachable.append(label)
+                elif reach_status == "Unverifiable":
+                    unverifiable.append(label)
+                elif reach_status == "Requires Manual Review":
+                    manual_review.append(label)
+                elif ln in fix_lines:
+                    unverifiable.append(
+                        label + "  (fix applied but reachability not eliminated)")
+                else:
+                    manual_review.append(
+                        label + "  (no automated fix available)")
+
+    levels = [
+        ("Confirmed Reachable -- tainted data reaches sink with no sanitiser",
+         "#DC2626", "#991B1B", confirmed_reachable),
+        ("Reachability Eliminated -- attack path broken by remediation or sanitiser",
+         "#10B981", "#059669", reachability_eliminated),
+        ("Unverifiable -- path exists but sanitisation cannot be proven statically",
+         "#F59E0B", "#D97706", unverifiable),
+        ("Requires Manual Review -- reachability depends on runtime context",
+         "#6366F1", "#4F46E5", manual_review),
+        ("Side Effects -- new attack paths introduced by remediation",
+         "#7C3AED", "#6D28D9", side_effects),
+    ]
+
+    for title, color, border, items in levels:
+        if not items:
+            continue
+        st.markdown(
+            f'<div style="background:#0B1120;border:1px solid {border};'
+            f'border-radius:4px;padding:16px;margin-bottom:16px;">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
+            f'<div style="width:12px;height:12px;border-radius:50%;background:{color};"></div>'
+            f'<span style="color:#E2E8F0;font-weight:600;font-size:14px;">{title}</span>'
+            f'<span style="color:#64748B;font-size:12px;margin-left:auto;">'
+            f'{len(items)} items</span></div>'
+            + "".join(
+                f'<div style="color:#94A3B8;font-size:12px;padding:4px 0 4px 20px;'
+                f'border-left:2px solid {border};margin-left:5px;margin-bottom:4px;">'
+                f'{html_module.escape(item)}</div>'
+                for item in items
+            )
+            + '</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not any(items for _, _, _, items in levels):
+        st.success("No vulnerabilities were found -- nothing to classify.")
+
+    # summary metrics
+    st.markdown("---")
+    st.markdown("#### Summary")
+    total = (len(confirmed_reachable) + len(reachability_eliminated)
+             + len(unverifiable) + len(manual_review) + len(side_effects))
+    render_metrics_grid([
+        {"title": "Confirmed Reachable", "value": str(len(confirmed_reachable)),
+         "subtext": "Active attack paths", "icon": "X", "color": "#DC2626"},
+        {"title": "Reachability Eliminated",
+         "value": str(len(reachability_eliminated)),
+         "subtext": "Paths broken by fix", "icon": "ok", "color": "#10B981"},
+        {"title": "Unverifiable", "value": str(len(unverifiable)),
+         "subtext": "Cannot prove statically", "icon": "?", "color": "#F59E0B"},
+        {"title": "Manual Review", "value": str(len(manual_review)),
+         "subtext": "Runtime-dependent", "icon": "!", "color": "#6366F1"},
+    ])
+
 
 if __name__ == "__main__":
     main()

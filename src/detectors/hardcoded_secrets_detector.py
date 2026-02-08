@@ -158,6 +158,12 @@ class HardcodedSecretsDetector(BaseDetector):
                     # Extract the secret value (if captured in group)
                     secret_value = match.group(1) if match.groups() else match.group()
                     
+                    # Skip false positives: template / f-string variable
+                    # references like {password}, {username}, {api_key}.
+                    # These are interpolation placeholders, not real secrets.
+                    if re.fullmatch(r'\{[\w.]+\}', secret_value.strip()):
+                        continue
+                    
                     # Mask the secret for display (show first/last 4 chars)
                     masked_secret = self._mask_secret(secret_value)
                     

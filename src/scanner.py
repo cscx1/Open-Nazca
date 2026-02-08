@@ -1,6 +1,13 @@
 """
 Main Scanner Orchestrator for AI Code Breaker
 Coordinates the complete security scanning workflow.
+
+Pipeline:
+  1. Code ingestion
+  2. Pattern-based vulnerability detection
+  3. AST-based taint analysis  →  attack-path graph  →  reachability verification
+  4. LLM analysis (optional enrichment)
+  5. Report generation with trust-gradient classification
 """
 
 import time
@@ -8,7 +15,6 @@ import logging
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 
-# Import all modules
 # Import all modules
 from .ingestion import CodeIngestion
 from .detectors import (
@@ -21,6 +27,12 @@ from .llm_reasoning import LLMAnalyzer
 from .snowflake_integration import SnowflakeClient
 from .report_generation import ReportGenerator
 from .rag_manager import RAGManager
+
+# Analysis pipeline
+from .analysis.taint_tracker import TaintTracker
+from .analysis.attack_graph import AttackGraph
+from .analysis.sink_classifier import SinkClassifier
+from .analysis.reachability import ReachabilityVerifier, ReachabilityStatus
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +108,11 @@ class AICodeScanner:
                 logger.warning(f"Snowflake not available: {e}. Results won't be persisted.")
                 self.use_snowflake = False
         
+        # Initialize analysis pipeline
+        self.taint_tracker = TaintTracker()
+        self.reachability_verifier = ReachabilityVerifier()
+        logger.info("✓ Analysis pipeline loaded (taint tracker + reachability verifier)")
+
         # Initialize report generator
         self.report_generator = ReportGenerator()
         logger.info("✓ Report generator loaded")
@@ -172,6 +189,50 @@ class AICodeScanner:
             all_findings = self._deduplicate_findings(all_findings)
             
             logger.info(f"✓ Detection complete: {len(all_findings)} total vulnerabilities found")
+            
+            # Step 3.5: AST-based taint analysis + attack-path graph + reachability
+            logger.info("\n[3.5/5] Running static analysis pipeline...")
+            attack_paths_data = []
+            reachability_data = []
+            try:
+                if file_data['language'] == 'python':
+                    nodes, edges = self.taint_tracker.analyse(
+                        file_data['file_name'], file_data['code_content']
+                    )
+                    if nodes:
+                        graph = AttackGraph()
+                        graph.add_nodes_and_edges(nodes, edges)
+                        attack_paths = graph.enumerate_attack_paths()
+                        logger.info(f"  ✓ Built attack graph: {graph.node_count} nodes, "
+                                    f"{graph.edge_count} edges, {len(attack_paths)} paths")
+                        
+                        # Verify reachability
+                        reach_results = self.reachability_verifier.verify_paths(
+                            attack_paths, file_data['code_content'], file_data['file_name']
+                        )
+                        
+                        # Enrich findings with trust-gradient classification
+                        all_findings = self._enrich_findings_with_analysis(
+                            all_findings, reach_results
+                        )
+                        
+                        attack_paths_data = [p.to_dict() for p in attack_paths]
+                        reachability_data = [r.to_dict() for r in reach_results]
+                        
+                        # Log reachability summary
+                        status_counts: Dict[str, int] = {}
+                        for r in reach_results:
+                            s = r.status.value
+                            status_counts[s] = status_counts.get(s, 0) + 1
+                        for status, count in status_counts.items():
+                            logger.info(f"    {status}: {count}")
+                    else:
+                        logger.info("  No taint nodes found — skipping graph construction")
+                else:
+                    logger.info(f"  AST analysis not yet supported for {file_data['language']} "
+                                f"— using pattern-based results only")
+            except Exception as e:
+                logger.warning(f"  ⚠ Analysis pipeline error: {e}")
             
             # Step 4: LLM Analysis (if enabled)
             if self.use_llm_analysis and all_findings:
@@ -332,7 +393,9 @@ class AICodeScanner:
                 'severity_counts': severity_counts,
                 'scan_duration_ms': scan_duration_ms,
                 'findings': findings_dicts,
-                'report_paths': report_paths
+                'report_paths': report_paths,
+                'attack_paths': attack_paths_data,
+                'reachability': reachability_data,
             }
             
             logger.info(f"\n✅ Scan complete! Duration: {scan_duration_ms}ms")
@@ -348,6 +411,109 @@ class AICodeScanner:
                 'file_name': file_path
             }
     
+    def _enrich_findings_with_analysis(
+        self,
+        findings: List[Finding],
+        reach_results: List,
+    ) -> List[Finding]:
+        """
+        Annotate pattern-based findings with trust-gradient classification
+        derived from the AST analysis pipeline.
+
+        Matching strategy (in priority order):
+        1. Exact match: sink line + vulnerability type
+        2. Sink line match (any type)
+        3. Transform line match: pattern detectors often flag the line where
+           tainted data is concatenated (a transform), not the sink API call.
+           We search the attack path's transform nodes for a matching line.
+        4. Source line match: some pattern detectors flag the source line.
+        5. No match: create a new finding from the AST analysis.
+        """
+        from .analysis.reachability import ReachabilityResult
+
+        # Build lookup: line → list of findings on that line
+        line_to_findings: Dict[int, List[Finding]] = {}
+        for f in findings:
+            line_to_findings.setdefault(f.line_number, []).append(f)
+
+        # Track which findings have already been enriched
+        enriched: set = set()
+
+        for rr in reach_results:
+            if not isinstance(rr, ReachabilityResult):
+                continue
+            path = rr.path
+            sink_line = path.sink.line
+            vuln_type = path.vulnerability_type.lower()
+
+            matched = None
+
+            # 1) Exact match on sink line + type
+            for f in line_to_findings.get(sink_line, []):
+                if f.vulnerability_type.lower() == vuln_type and id(f) not in enriched:
+                    matched = f
+                    break
+
+            # 2) Sink line, any type
+            if matched is None:
+                for f in line_to_findings.get(sink_line, []):
+                    if id(f) not in enriched:
+                        matched = f
+                        break
+
+            # 3) Transform line match
+            if matched is None:
+                for transform in path.transforms:
+                    for f in line_to_findings.get(transform.line, []):
+                        if id(f) not in enriched:
+                            matched = f
+                            break
+                    if matched:
+                        break
+
+            # 4) Source line match
+            if matched is None:
+                for f in line_to_findings.get(path.source.line, []):
+                    if id(f) not in enriched:
+                        matched = f
+                        break
+
+            if matched is not None:
+                # Enrich the existing finding
+                enriched.add(id(matched))
+                matched.reachability_status = rr.status.value
+                matched.reachability_reasoning = rr.reasoning
+                matched.attack_path = path.to_dict()
+                matched.sink_api = path.sink.name
+                # Upgrade classification if analysis gives more specific type
+                from .analysis.sink_classifier import SinkClassifier
+                sink_info = SinkClassifier.classify(path.sink.name)
+                if sink_info:
+                    matched.vulnerability_type = sink_info.vulnerability_type
+                    matched.severity = sink_info.severity
+                    matched.cwe_id = sink_info.cwe_id
+            else:
+                # Create a new finding from the AST analysis
+                from .analysis.sink_classifier import SinkClassifier
+                sink_info = SinkClassifier.classify(path.sink.name)
+                new_finding = Finding(
+                    detector_name="StaticAnalysisPipeline",
+                    vulnerability_type=path.vulnerability_type,
+                    severity=path.severity,
+                    line_number=sink_line,
+                    code_snippet="",
+                    description=path.sink.detail,
+                    confidence=0.9,
+                    cwe_id=path.cwe_id or None,
+                    reachability_status=rr.status.value,
+                    reachability_reasoning=rr.reasoning,
+                    attack_path=path.to_dict(),
+                    sink_api=path.sink.name,
+                )
+                findings.append(new_finding)
+
+        return findings
+
     def _deduplicate_findings(self, findings: List[Finding]) -> List[Finding]:
         """
         Remove duplicate findings on the same line for the same vulnerability type.
