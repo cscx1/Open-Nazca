@@ -1,0 +1,75 @@
+{
+  "scan_info": {
+    "scan_id": "local-1770746359",
+    "file_name": "Test3.py",
+    "language": "python",
+    "scan_timestamp": "2026-02-10 12:59:19",
+    "total_findings": 1
+  },
+  "summary": {
+    "total": 1,
+    "by_severity": {
+      "HIGH": 1
+    },
+    "by_type": {
+      "Path Traversal": 1
+    }
+  },
+  "reachability_summary": {
+    "Confirmed Reachable": 1,
+    "Reachability Eliminated": 0,
+    "Unverifiable": 0,
+    "Requires Manual Review": 0,
+    "Not Analysed": 0
+  },
+  "attack_paths": [],
+  "reachability": [],
+  "findings": [
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Path Traversal",
+      "severity": "HIGH",
+      "line_number": 25,
+      "code_snippet": "",
+      "description": "Tainted data reaches send_file()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-22",
+      "owasp_category": null,
+      "metadata": {},
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from request.args.get (line 13) to send_file (line 25) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "request.args.get",
+          "file": "Test3.py",
+          "line": 13,
+          "detail": "HTTP query parameter"
+        },
+        "transforms": [
+          {
+            "name": "doc_name",
+            "file": "Test3.py",
+            "line": 13,
+            "detail": "Variable 'doc_name' receives tainted data"
+          },
+          {
+            "name": "full_path",
+            "file": "Test3.py",
+            "line": 19,
+            "detail": "Variable 'full_path' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "send_file",
+          "file": "Test3.py",
+          "line": 25,
+          "detail": "Tainted data reaches send_file()"
+        },
+        "vulnerability_type": "Path Traversal",
+        "severity": "HIGH",
+        "cwe_id": "CWE-22"
+      },
+      "sink_api": "send_file"
+    }
+  ]
+}

@@ -1,11 +1,23 @@
-import streamlit as st
 import sys
+
+# Must be launched with: streamlit run app.py (not: python app.py)
+if __name__ == "__main__":
+    try:
+        from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+        if get_script_run_ctx() is None:
+            print("DLLM CheckMate is a Streamlit app. Run with: streamlit run app.py")
+            sys.exit(1)
+    except Exception:
+        pass
+
+import streamlit as st
 import os
 import re
 import html as html_module
 import json
 import tempfile
 import traceback
+import difflib
 from pathlib import Path
 from datetime import datetime
 import time
@@ -15,10 +27,11 @@ import plotly.graph_objects as go
 
 from src.scanner import AICodeScanner
 from src.rag_manager import RAGManager
+import networkx as nx
 
 # Page configuration
 st.set_page_config(
-    page_title="LLMCheck Security Analytics",
+    page_title="DLLM CheckMate",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -413,7 +426,7 @@ def main():
         # Logo Area
         st.markdown("""
         <div class="sidebar-logo-container">
-            <h1 style="color: #F43F5E; font-size: 26px; font-weight: 800; letter-spacing: -1px;">DLLM<span style="color: #ffffff;">Checkmate</span></h1>
+            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -1px;"><span style="color: #F43F5E;">DLLM </span><span style="color: #ffffff;">CheckMate</span></h1>
             <p style="color: #64748B; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;">Security Analytics</p>
         </div>
         """, unsafe_allow_html=True)
@@ -1126,11 +1139,12 @@ def render_sandbox_lab():
     res = st.session_state.sb_results
 
     # ── results tabs ────────────────────────────────────────────
-    tab_exec, tab_graph, tab_blast, tab_conf = st.tabs([
+    tab_exec, tab_graph, tab_blast, tab_conf, tab_map = st.tabs([
         "📜  Execution Log",
         "🗺️  Attack-Path Graph",
         "💥  Blast Radius",
         "🎯  Confidence",
+        "🗺️  Map Analysis",
     ])
     with tab_exec:
         _render_execution_replay(res)
@@ -1140,6 +1154,8 @@ def render_sandbox_lab():
         _render_blast_radius_dynamic(res)
     with tab_conf:
         _render_confidence_panel_dynamic(res)
+    with tab_map:
+        _render_map_analysis(res)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -1194,21 +1210,100 @@ def _execute_sandbox_on_user_code(uploaded_files):
     time.sleep(0.15)
 
     from src.ingestion.code_ingestion import CodeIngestion
-    from src.detectors.hardcoded_secrets_detector import HardcodedSecretsDetector
-    from src.detectors.prompt_injection_detector import PromptInjectionDetector
-    from src.detectors.overprivileged_tools_detector import OverprivilegedToolsDetector
+    from src.detectors import (
+        PromptInjectionDetector,
+        HardcodedSecretsDetector,
+        OverprivilegedToolsDetector,
+        WeakRandomDetector,
+        WeakHashDetector,
+        XPathInjectionDetector,
+        XXEDetector,
+        DeserializationDetector,
+        SecureCookieDetector,
+        TrustBoundaryDetector,
+        LDAPInjectionDetector,
+        UnsafeReflectionDetector,
+        CryptoMisuseDetector,
+        TOCTOUDetector,
+        MemorySafetyDetector,
+        TypeConfusionDetector,
+        LogInjectionDetector,
+        XSSDetector,
+        EvasionPatternsDetector,
+        OperationalSecurityDetector,
+    )
 
     ingestion = CodeIngestion(max_file_size_mb=10)
     detectors = [
-        HardcodedSecretsDetector(enabled=True),
         PromptInjectionDetector(enabled=True),
+        HardcodedSecretsDetector(enabled=True),
         OverprivilegedToolsDetector(enabled=True),
+        WeakRandomDetector(enabled=True),
+        WeakHashDetector(enabled=True),
+        XPathInjectionDetector(enabled=True),
+        XXEDetector(enabled=True),
+        DeserializationDetector(enabled=True),
+        SecureCookieDetector(enabled=True),
+        TrustBoundaryDetector(enabled=True),
+        LDAPInjectionDetector(enabled=True),
+        UnsafeReflectionDetector(enabled=True),
+        CryptoMisuseDetector(enabled=True),
+        TOCTOUDetector(enabled=True),
+        MemorySafetyDetector(enabled=True),
+        TypeConfusionDetector(enabled=True),
+        LogInjectionDetector(enabled=True),
+        XSSDetector(enabled=True),
+        EvasionPatternsDetector(enabled=True),
+        OperationalSecurityDetector(enabled=True),
     ]
     taint_tracker = TaintTracker()
     reachability_verifier = ReachabilityVerifier()
     remediator = FunctionalRemediator()
 
-    log("Loaded: CodeIngestion + 3 detectors + taint tracker + reachability verifier", "ok")
+    def _deduplicate_items(items):
+        """Keep one finding per (line, type, sink_api), preferring stronger status/confidence."""
+        def _rank(status):
+            order = {
+                "Confirmed Reachable": 4,
+                "Requires Manual Review": 3,
+                "Unverifiable": 2,
+                "Reachability Eliminated": 1,
+            }
+            return order.get(status or "", 0)
+
+        unique = {}
+        alias_map = {
+            "attribute injection": "mass assignment",
+        }
+        for item in items:
+            normalized = alias_map.get(
+                str(item.get("vulnerability_type", "")).lower(),
+                str(item.get("vulnerability_type", "")).lower(),
+            )
+            key = (
+                item.get("line_number"),
+                normalized,
+                item.get("sink_api", ""),
+            )
+            if key not in unique:
+                unique[key] = item
+                continue
+            cur = unique[key]
+            if _rank(item.get("reachability_status")) > _rank(cur.get("reachability_status")):
+                unique[key] = item
+                continue
+            if (
+                _rank(item.get("reachability_status")) == _rank(cur.get("reachability_status"))
+                and float(item.get("confidence", 0)) > float(cur.get("confidence", 0))
+            ):
+                unique[key] = item
+        return list(unique.values())
+
+    log(
+        f"Loaded: CodeIngestion + {len(detectors)} detectors + taint tracker + "
+        "reachability verifier",
+        "ok",
+    )
     progress.progress(8, text="Sandbox ready")
 
     # ── PHASE 1 — DETECTION ────────────────────────────────────
@@ -1237,7 +1332,7 @@ def _execute_sandbox_on_user_code(uploaded_files):
             time.sleep(0.06)
 
         all_findings_objs_before[fname] = findings
-        flist = [x.to_dict() for x in findings]
+        flist = _deduplicate_items([x.to_dict() for x in findings])
         all_before[fname] = flist
         for item in flist:
             sev = item.get('severity', 'MEDIUM').lower()
@@ -1340,10 +1435,6 @@ def _execute_sandbox_on_user_code(uploaded_files):
                             new_item['severity'] = sink_info.severity
                             new_item['cwe_id'] = sink_info.cwe_id
                         all_before.setdefault(fname, []).append(new_item)
-                        # Update totals
-                        sev = new_item['severity'].lower()
-                        results["totals_before"][sev] = results["totals_before"].get(sev, 0) + 1
-                        results["totals_before"]["total"] += 1
                         log(f"    AST finding: L{sink_line} {new_item['vulnerability_type']} "
                             f"({rr.status.value})", "fail")
             else:
@@ -1355,7 +1446,16 @@ def _execute_sandbox_on_user_code(uploaded_files):
         reach_results_before_all[fname] = reach_results
         time.sleep(0.06)
 
-    # Recalculate totals after Phase 2 AST enrichment
+    # Recalculate totals after Phase 2 AST enrichment + dedup
+    results["totals_before"] = {"critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0}
+    for fname, items in list(all_before.items()):
+        deduped = _deduplicate_items(items)
+        all_before[fname] = deduped
+        for item in deduped:
+            sev = item.get('severity', 'MEDIUM').lower()
+            results["totals_before"][sev] = results["totals_before"].get(sev, 0) + 1
+            results["totals_before"]["total"] += 1
+
     tb = results["totals_before"]["total"]
     log(f"  TOTAL after analysis: {tb} vulnerabilities across {len(file_data)} file(s)",
         "fail" if tb > 0 else "ok")
@@ -1398,13 +1498,23 @@ def _execute_sandbox_on_user_code(uploaded_files):
         original = file_data[fname]["content"]
 
         if not reach_results:
-            # No analysis-backed paths — fall back to empty
-            fixed_files[fname] = {"code": original, "fixes": []}
-            log(f"  {fname}: no verified attack paths - no fixes to apply", "info")
+            # No taint paths — still apply pattern-based fixes (Weak Hash, Debug, YAML, etc.)
+            pattern_findings = all_before.get(fname, [])
+            fixed_code, diffs = remediator.remediate(original, [], findings=pattern_findings)
+            fix_dicts = [d.to_dict() for d in diffs]
+            fixed_files[fname] = {"code": fixed_code, "fixes": fix_dicts}
+            for d in diffs:
+                if d.is_functional:
+                    total_functional += 1
+                    log(f"    L{d.line_number}: {d.description}", "ok")
+                else:
+                    total_rejected += 1
+            log(f"  {fname}: no taint paths; applied {len([d for d in diffs if d.is_functional])} pattern fix(es)", "info")
             continue
 
-        log(f"  [{fname}] Applying functional fixes for {len(reach_results)} paths...", "phase")
-        fixed_code, diffs = remediator.remediate(original, reach_results)
+        log(f"  [{fname}] Applying functional fixes for {len(reach_results)} paths + pattern findings...", "phase")
+        pattern_findings = all_before.get(fname, [])
+        fixed_code, diffs = remediator.remediate(original, reach_results, findings=pattern_findings)
         fix_dicts = [d.to_dict() for d in diffs]
         fixed_files[fname] = {"code": fixed_code, "fixes": fix_dicts}
 
@@ -1415,7 +1525,7 @@ def _execute_sandbox_on_user_code(uploaded_files):
             else:
                 total_rejected += 1
                 reason = d.rejection_reason or "No automated fix"
-                log(f"    L{d.line_number}: REJECTED - {reason}", "warn")
+                log(f"    L{d.line_number}: GUIDANCE - {reason}", "warn")
             time.sleep(0.05)
 
     # Also handle files that only had pattern findings (no AST paths)
@@ -1427,7 +1537,7 @@ def _execute_sandbox_on_user_code(uploaded_files):
     results["total_fixes"] = total_fixes
     results["total_functional_fixes"] = total_functional
     results["total_rejected_fixes"] = total_rejected
-    log(f"  {total_functional} functional fix(es) applied, {total_rejected} rejected", "ok")
+    log(f"  {total_functional} functional fix(es) applied, {total_rejected} guided option(s)", "ok")
     progress.progress(60, text="Remediation complete")
 
     # ── PHASE 4 — RE-VERIFICATION ─────────────────────────────
@@ -1451,7 +1561,7 @@ def _execute_sandbox_on_user_code(uploaded_files):
         findings = []
         for det in detectors:
             findings.extend(det.detect(fd['code_content'], fd['language'], fd['file_name']))
-        flist = [x.to_dict() for x in findings]
+        flist = _deduplicate_items([x.to_dict() for x in findings])
         all_after[fname] = flist
         for item in flist:
             sev = item.get('severity', 'MEDIUM').lower()
@@ -1500,9 +1610,6 @@ def _execute_sandbox_on_user_code(uploaded_files):
                             'sink_api': rr.path.sink.name,
                         }
                         all_after.setdefault(fname, []).append(new_item)
-                        sev = new_item['severity'].lower()
-                        results["totals_after"][sev] = results["totals_after"].get(sev, 0) + 1
-                        results["totals_after"]["total"] += 1
 
         attack_paths_after_all[fname] = attack_paths_after
         reach_results_after_all[fname] = reach_results_after
@@ -1525,6 +1632,16 @@ def _execute_sandbox_on_user_code(uploaded_files):
 
         time.sleep(0.06)
 
+    # Recalculate totals after Phase 4 AST enrichment + dedup
+    results["totals_after"] = {"critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0}
+    for fname, items in list(all_after.items()):
+        deduped = _deduplicate_items(items)
+        all_after[fname] = deduped
+        for item in deduped:
+            sev = item.get('severity', 'MEDIUM').lower()
+            results["totals_after"][sev] = results["totals_after"].get(sev, 0) + 1
+            results["totals_after"]["total"] += 1
+
     ta = results["totals_after"]["total"]
     log(f"  TOTAL remaining: {ta}  (was {tb})", "ok" if ta < tb else "warn")
     progress.progress(85, text="Re-verification complete")
@@ -1538,7 +1655,7 @@ def _execute_sandbox_on_user_code(uploaded_files):
     log(f"  Vulnerabilities before:     {tb}")
     log(f"  Vulnerabilities after:      {ta}")
     log(f"  Functional fixes applied:   {total_functional}")
-    log(f"  Non-functional rejected:    {total_rejected}")
+    log(f"  Guided options generated:   {total_rejected}")
     log(f"  Reachability reduction:     {reduction:.1f}%")
 
     import shutil
@@ -1592,15 +1709,34 @@ def _render_execution_replay(res):
         na = len(fdata["findings_after"])
         fixes = fdata.get("fixes", [])
         nf_func = sum(1 for f in fixes if f.get("is_functional", False))
-        nf_rej = sum(1 for f in fixes if not f.get("is_functional", True))
+        nf_guidance = sum(1 for f in fixes if not f.get("is_functional", True))
+        fix_by_line = {}
+        for fix in fixes:
+            fix_by_line.setdefault(fix.get("line_number"), []).append(fix)
 
+        eliminated = max(0, nb - na)
         with st.expander(
-            f"**{fname}** -- {nb} findings, {nf_func} functional fix(es), {na} remaining",
+            f"**{fname}** -- {nb} before → {na} after re-scan ({eliminated} eliminated) | "
+            f"{nf_func} auto-fix(es), {nf_guidance} guidance-only",
             expanded=(nb > 0),
         ):
             if nb == 0:
                 st.success("No vulnerabilities found in this file.")
                 continue
+
+            # --- Remaining after re-scan (by severity) ---
+            if na > 0:
+                remaining_by_sev = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                for f in fdata.get("findings_after", []):
+                    sev = (f.get("severity") or "MEDIUM").upper()
+                    if sev in remaining_by_sev:
+                        remaining_by_sev[sev] += 1
+                st.warning(
+                    f"**After re-scan of fixed code:** {na} findings still reported — "
+                    f"Critical: {remaining_by_sev['CRITICAL']}, High: {remaining_by_sev['HIGH']}, "
+                    f"Medium: {remaining_by_sev['MEDIUM']}, Low: {remaining_by_sev['LOW']}. "
+                    "Only a few issue types get auto-fixes; the rest need guided or manual remediation."
+                )
 
             # --- findings table with reachability status ---
             st.markdown("##### Findings (before remediation)")
@@ -1663,6 +1799,29 @@ def _render_execution_replay(res):
                     unsafe_allow_html=True,
                 )
 
+                # --- root cause + fix rationale + 3-tier options ---
+                matched_fixes = fix_by_line.get(f.get("line_number"), [])
+                primary_fix = matched_fixes[0] if matched_fixes else None
+                options = _build_fix_options_for_finding(f, primary_fix)
+                why_exists = _explain_why_vulnerability_exists(f)
+                why_fix_works = _explain_why_fix_works(f, primary_fix)
+
+                st.markdown(
+                    f'<div style="padding:8px 10px;margin:4px 0 10px 0;background:#111827;'
+                    f'border:1px solid #1f2937;border-radius:6px;font-size:12px;">'
+                    f'<div style="color:#FBBF24;font-weight:700;margin-bottom:4px;">Why this exists</div>'
+                    f'<div style="color:#CBD5E1;margin-bottom:6px;">{html_module.escape(why_exists)}</div>'
+                    f'<div style="color:#34D399;font-weight:700;margin-bottom:4px;">Why the fix works</div>'
+                    f'<div style="color:#CBD5E1;margin-bottom:8px;">{html_module.escape(why_fix_works)}</div>'
+                    f'<div style="color:#A78BFA;font-weight:700;margin-bottom:4px;">Fix options</div>'
+                    f'<div style="color:#E2E8F0;">'
+                    f'<div><strong>1) Quick Fix</strong>: {html_module.escape(options["quick"])}</div>'
+                    f'<div><strong>2) Proper Fix</strong>: {html_module.escape(options["proper"])}</div>'
+                    f'<div><strong>3) Architectural Fix</strong>: {html_module.escape(options["architectural"])}</div>'
+                    f'</div></div>',
+                    unsafe_allow_html=True,
+                )
+
             # --- fixes applied (functional diffs only) ---
             if fixes:
                 st.markdown("##### Remediation Diffs")
@@ -1678,11 +1837,12 @@ def _render_execution_replay(res):
                         reason = fix.get("rejection_reason", "Non-functional change")
                         st.markdown(
                             f'**Line {fix.get("line_number", "?")}** '
-                            f'REJECTED -- {html_module.escape(reason)}'
+                            f'Guided options provided -- {html_module.escape(reason)}'
                         )
 
             # --- code comparison ---
-            st.markdown("##### Code Comparison (before -> after)")
+            st.markdown("##### Side-by-Side Remediation View")
+            st.caption("Markers: 🚨 vulnerable line, ✅ safe line, + added (green), - removed (red), ~ modified (yellow)")
             lang = fname.rsplit('.', 1)[-1] if '.' in fname else 'text'
             lang_map = {"py": "python", "js": "javascript", "ts": "typescript",
                         "rb": "ruby", "rs": "rust", "go": "go", "java": "java",
@@ -1690,12 +1850,17 @@ def _render_execution_replay(res):
             lang = lang_map.get(lang, lang)
 
             col1, col2 = st.columns(2)
+            vuln_lines = {f.get("line_number") for f in fdata["findings_before"] if f.get("line_number")}
+            before_html, after_html = _build_side_by_side_marked_diff(
+                fdata["original_code"], fdata["fixed_code"], max_lines=1200,
+                vuln_lines=vuln_lines,
+            )
             with col1:
-                st.markdown("*Original:*")
-                st.code(fdata["original_code"][:6000], language=lang)
+                st.markdown("*Original Vulnerable Code*")
+                st.markdown(before_html, unsafe_allow_html=True)
             with col2:
-                st.markdown("*Remediated:*")
-                st.code(fdata["fixed_code"][:6000], language=lang)
+                st.markdown("*Remediated Safe Code*")
+                st.markdown(after_html, unsafe_allow_html=True)
 
             # --- re-verification result ---
             if na == 0 and nb > 0:
@@ -1707,6 +1872,138 @@ def _render_execution_replay(res):
                 )
             elif na == nb:
                 st.error(f"All {na} findings persist -- manual remediation required.")
+
+
+def _build_side_by_side_marked_diff(
+    original_code: str, fixed_code: str, max_lines: int = 1200,
+    vuln_lines: set | None = None,
+):
+    """Build colored side-by-side diff views with visual markers.
+
+    When original == fixed (no auto-patch), highlights vulnerable lines
+    in the original column so the user still sees red markers.
+    """
+    before_lines = original_code.splitlines()
+    after_lines = fixed_code.splitlines()
+    has_changes = original_code != fixed_code
+
+    before_view: list[str] = []
+    after_view: list[str] = []
+    vuln_lines = vuln_lines or set()
+
+    def _span(prefix: str, text: str, color: str) -> str:
+        return f'<span style="color:{color};">{html_module.escape(prefix + text)}</span>'
+
+    if has_changes:
+        sm = difflib.SequenceMatcher(a=before_lines, b=after_lines)
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if len(before_view) > max_lines:
+                break
+            if tag == "equal":
+                for ol, nl in zip(before_lines[i1:i2], after_lines[j1:j2]):
+                    before_view.append(_span("   ", ol, "#94A3B8"))
+                    after_view.append(_span("   ", nl, "#94A3B8"))
+            elif tag == "replace":
+                oc, nc = before_lines[i1:i2], after_lines[j1:j2]
+                for idx in range(max(len(oc), len(nc))):
+                    if idx < len(oc):
+                        before_view.append(_span("- 🚨 ", oc[idx], "#F87171"))
+                    if idx < len(nc):
+                        after_view.append(_span("+ ✅ ", nc[idx], "#34D399"))
+            elif tag == "delete":
+                for ol in before_lines[i1:i2]:
+                    before_view.append(_span("- 🚨 ", ol, "#F87171"))
+            elif tag == "insert":
+                for nl in after_lines[j1:j2]:
+                    after_view.append(_span("+ ✅ ", nl, "#34D399"))
+    else:
+        # No auto-fix was applied — still mark vulnerable lines red.
+        for idx, line in enumerate(before_lines):
+            ln = idx + 1
+            if ln in vuln_lines:
+                before_view.append(_span("🚨 ", line, "#F87171"))
+                after_view.append(_span("🚨 ", line, "#F87171"))
+            else:
+                before_view.append(_span("   ", line, "#94A3B8"))
+                after_view.append(_span("   ", line, "#94A3B8"))
+
+    for view in (before_view, after_view):
+        if len(view) > max_lines:
+            view[max_lines:] = ['<span style="color:#64748B;">... truncated ...</span>']
+
+    _wrap = (
+        '<div style="background:#0B1120;border:1px solid #1F2937;border-radius:6px;'
+        'padding:8px;max-height:520px;overflow:auto;font-family:monospace;font-size:12px;">'
+        "<pre style='margin:0;white-space:pre-wrap;'>{}</pre></div>"
+    )
+    return _wrap.format("<br/>".join(before_view)), _wrap.format("<br/>".join(after_view))
+
+
+def _build_fix_options_for_finding(finding: dict, fix: dict | None) -> dict:
+    """Return quick/proper/architectural remediation options per finding."""
+    vuln = (finding.get("vulnerability_type") or "").lower()
+    line = finding.get("line_number", "?")
+    quick = (
+        fix.get("description")
+        if fix and fix.get("description")
+        else "Apply strict input validation at the sink and add an explicit guard condition."
+    )
+    proper = "Refactor to safe APIs with structured parameterization and centralized validation."
+    architectural = "Move the risky operation behind a dedicated security service with policy enforcement and allowlists."
+
+    if "sql injection" in vuln:
+        proper = "Replace string-built queries with parameterized statements for every DB call."
+        architectural = "Introduce a repository/ORM layer that forbids raw SQL string interpolation."
+    elif "command injection" in vuln:
+        proper = "Use argument arrays with subprocess.run(..., shell=False) and strict allowlists."
+        architectural = "Replace shell execution with internal job/task APIs."
+    elif "code execution" in vuln:
+        proper = "Use a restricted interpreter/sandbox with explicit operation allowlists."
+        architectural = "Eliminate dynamic code execution by moving logic to typed command handlers."
+    elif "path traversal" in vuln:
+        proper = "Normalize path and enforce base-directory containment checks before file access."
+        architectural = "Use storage abstraction with opaque file IDs instead of user-provided paths."
+    elif "xss" in vuln:
+        proper = "Enable contextual output encoding and framework auto-escaping by default."
+        architectural = "Adopt a trusted template/component pipeline with strict CSP."
+    elif "open redirect" in vuln:
+        proper = "Validate redirect targets against a strict allowlist of hosts/paths."
+        architectural = "Use server-side route keys instead of user-supplied redirect URLs."
+    elif "unsafe file upload" in vuln:
+        proper = "Use secure_filename + extension/MIME checks + malware scanning + size limits."
+        architectural = "Move uploads to isolated object storage with async scanning and signed URL access."
+    elif "information disclosure" in vuln:
+        proper = "Return redacted metadata only; remove environment/version details from responses."
+        architectural = "Centralize error/diagnostic handling with tiered disclosure policies."
+    elif "memory exhaustion" in vuln:
+        proper = "Clamp user-controlled sizes and enforce per-request quotas."
+        architectural = "Apply upstream rate limiting plus worker memory ceilings and queue backpressure."
+    elif "format string" in vuln:
+        proper = "Treat format strings as static constants; pass user data only as values."
+        architectural = "Use safe templating with strict schema-driven rendering."
+    elif "debug mode enabled" in vuln:
+        proper = "Read debug setting from environment and default to False in all deployed environments."
+        architectural = "Enforce production runtime guardrails in deployment pipeline/infra policy."
+
+    return {"quick": quick, "proper": proper, "architectural": architectural}
+
+
+def _explain_why_vulnerability_exists(finding: dict) -> str:
+    desc = finding.get("description", "")
+    if desc:
+        return desc
+    return "Untrusted input reaches a sensitive operation without sufficient validation, escaping, or policy checks."
+
+
+def _explain_why_fix_works(finding: dict, fix: dict | None) -> str:
+    if fix and fix.get("description"):
+        return str(fix.get("description"))
+    vuln = (finding.get("vulnerability_type") or "").lower()
+    if "injection" in vuln:
+        return "The fix separates code/command/query structure from untrusted data, blocking attacker-controlled interpretation."
+    if "debug" in vuln or "disclosure" in vuln:
+        return "The fix removes sensitive runtime exposure and disables unsafe runtime features."
+    return "The fix adds a security boundary (validation, allowlist, or safer API) before the risky sink."
 
 
 # ────────────────────────────────────────────────────────────────
@@ -1833,19 +2130,33 @@ def _render_dynamic_attack_graph(res):
     </div>
     """, unsafe_allow_html=True)
 
-    # detail table — attack path detail with reachability status
+    # detail table — attack path detail with reachability status (use after-status when available)
     st.markdown("---")
     st.markdown("#### Attack Path Detail")
     for fname, fdata in res["files"].items():
-        # Show real attack paths first
-        reach_data = fdata.get("reachability_before", [])
-        if reach_data:
-            for rd in reach_data:
+        reach_before = fdata.get("reachability_before", [])
+        reach_after = fdata.get("reachability_after", [])
+        # Build key -> after status for paths that still exist after remediation
+        after_by_key = {}
+        for rd in reach_after:
+            path_info = rd.get("path", {})
+            sink_info = path_info.get("sink", {})
+            src_info = path_info.get("source", {})
+            key = (sink_info.get("line"), src_info.get("line"), path_info.get("vulnerability_type", ""))
+            after_by_key[key] = rd.get("status", "")
+
+        if reach_before:
+            for rd in reach_before:
                 path_info = rd.get("path", {})
                 status = rd.get("status", "")
                 src_info = path_info.get("source", {})
                 sink_info = path_info.get("sink", {})
                 transforms = path_info.get("transforms", [])
+
+                # If we have after-results, show after status (so fixed paths show green)
+                key = (sink_info.get("line"), src_info.get("line"), path_info.get("vulnerability_type", ""))
+                if after_by_key:
+                    status = after_by_key.get(key, "Reachability Eliminated")
 
                 chain = html_module.escape(src_info.get("name", "?"))
                 for t in transforms:
@@ -2186,6 +2497,262 @@ def _render_confidence_panel_dynamic(res):
         {"title": "Manual Review", "value": str(len(manual_review)),
          "subtext": "Runtime-dependent", "icon": "!", "color": "#6366F1"},
     ])
+
+
+# ────────────────────────────────────────────────────────────────
+#  TAB 5 — MAP ANALYSIS (Level 1: file tree → Level 2: vulnerability DAG)
+# ────────────────────────────────────────────────────────────────
+
+def _render_map_analysis(res):
+    """Two-level map: (1) file tree with nodes red if vulnerable;
+    (2) per-file vulnerability flow as a tree/DAG (source → transform → sink)."""
+    if "map_analysis_selected_file" not in st.session_state:
+        st.session_state.map_analysis_selected_file = None
+
+    files_data = res.get("files", {})
+    if not files_data:
+        st.info("No file data from the sandbox run.")
+        return
+
+    file_names = list(files_data.keys())
+
+    # ── Level 1: File tree (root → files), nodes red if has vulns ──
+    st.markdown("#### Level 1 — Uploaded files")
+    st.markdown(
+        '<p style="color:#64748B;">Each node is an uploaded file. '
+        '<span style="color:#DC2626;">Red</span> = has vulnerabilities; '
+        '<span style="color:#10B981;">Green</span> = clean. '
+        'Select a file below to open its vulnerability map.</p>',
+        unsafe_allow_html=True,
+    )
+
+    G1 = nx.DiGraph()
+    root_id = "Uploaded files"
+    G1.add_node(root_id, has_vuln=False, is_root=True)
+    for fname in file_names:
+        fdata = files_data[fname]
+        has_vuln = (
+            len(fdata.get("findings_before", [])) > 0
+            or len(fdata.get("attack_paths_before", [])) > 0
+        )
+        G1.add_node(fname, has_vuln=has_vuln, is_root=False)
+        G1.add_edge(root_id, fname)
+
+    # Tree layout: root at top, files in a row below
+    pos1 = {root_id: (0.5, 1.0)}
+    n = len(file_names)
+    for i, fname in enumerate(file_names):
+        pos1[fname] = ((i + 1) / (n + 1), 0.0) if n else (0.5, 0.0)
+
+    # Build edge traces (lines)
+    edge_x1, edge_y1 = [], []
+    for u, v in G1.edges():
+        x0, y0 = pos1[u]
+        x1, y1 = pos1[v]
+        edge_x1.extend([x0, x1, None])
+        edge_y1.extend([y0, y1, None])
+
+    node_x1 = [pos1[n][0] for n in G1.nodes()]
+    node_y1 = [pos1[n][1] for n in G1.nodes()]
+    node_colors1 = []
+    node_labels1 = []
+    for n in G1.nodes():
+        node_labels1.append(n)
+        if G1.nodes[n].get("is_root"):
+            node_colors1.append("#64748B")  # slate for root
+        else:
+            node_colors1.append("#DC2626" if G1.nodes[n].get("has_vuln") else "#10B981")
+
+    fig1 = go.Figure()
+    fig1.add_trace(
+        go.Scatter(
+            x=edge_x1, y=edge_y1,
+            mode="lines",
+            line=dict(color="#475569", width=2, dash="dot"),
+            hoverinfo="none",
+        )
+    )
+    fig1.add_trace(
+        go.Scatter(
+            x=node_x1, y=node_y1,
+            mode="markers+text",
+            text=node_labels1,
+            textposition="bottom center",
+            textfont=dict(size=11, color="#E2E8F0"),
+            marker=dict(
+                size=32,
+                color=node_colors1,
+                line=dict(color="#1E293B", width=2),
+                symbol="circle",
+            ),
+            customdata=node_labels1,
+            hovertemplate="%{customdata}<extra></extra>",
+        )
+    )
+    fig1.update_layout(
+        showlegend=False,
+        margin=dict(l=20, r=20, t=30, b=80),
+        height=280,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False, range=[-0.05, 1.05]),
+        yaxis=dict(visible=False, range=[-0.15, 1.15]),
+    )
+
+    st.plotly_chart(fig1, use_container_width=True, key="map_level1")
+
+    # File selector (drives Level 2)
+    selected = st.selectbox(
+        "Select file to view vulnerability map (Level 2)",
+        options=file_names,
+        index=file_names.index(st.session_state.map_analysis_selected_file)
+        if st.session_state.map_analysis_selected_file in file_names
+        else 0,
+        key="map_file_select",
+    )
+    st.session_state.map_analysis_selected_file = selected
+
+    # ── Level 2: Per-file vulnerability DAG (source → transform → sink) ──
+    st.markdown("---")
+    st.markdown(f"#### Level 2 — Vulnerability flow: **{selected}**")
+    fdata = files_data[selected]
+    paths = fdata.get("attack_paths_before", [])
+
+    if not paths:
+        st.info(
+            f"No attack-path data for **{selected}**. "
+            "This file has no taint paths from the static analysis pipeline."
+        )
+        return
+
+    # Build one DAG from all paths: nodes = source, transforms, sink (unique by id)
+    G2 = nx.DiGraph()
+    node_severity = {}
+    severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+    def _node_id(role, name, line):
+        return f"{role}:{name}:{line}"
+
+    for ap in paths:
+        src = ap.get("source", {})
+        sink = ap.get("sink", {})
+        transforms = ap.get("transforms", [])
+        sev = ap.get("severity", "MEDIUM")
+        sev_level = severity_order.get(sev, 0)
+
+        sid = _node_id("source", src.get("name", "?"), src.get("line", 0))
+        G2.add_node(sid, label=src.get("name", "?"), line=src.get("line"), role="source")
+        node_severity[sid] = max(node_severity.get(sid, 0), sev_level)
+
+        prev = sid
+        for t in transforms:
+            tid = _node_id("transform", t.get("name", "?"), t.get("line", 0))
+            G2.add_node(tid, label=t.get("name", "?"), line=t.get("line"), role="transform")
+            node_severity[tid] = max(node_severity.get(tid, 0), sev_level)
+            G2.add_edge(prev, tid)
+            prev = tid
+
+        kid = _node_id("sink", sink.get("name", "?"), sink.get("line", 0))
+        G2.add_node(kid, label=sink.get("name", "?"), line=sink.get("line"), role="sink")
+        node_severity[kid] = max(node_severity.get(kid, 0), sev_level)
+        G2.add_edge(prev, kid)
+
+    # Layered layout: source(s) left, transform(s) middle, sink(s) right (tree-like)
+    layers = {"source": 0, "transform": 1, "sink": 2}
+    for n in G2.nodes():
+        r = G2.nodes[n].get("role", "transform")
+        G2.nodes[n]["layer"] = layers.get(r, 1)
+    try:
+        pos2 = nx.multipartite_layout(G2, subset_key="layer", align="horizontal")
+    except Exception:
+        pos2 = nx.spring_layout(G2, seed=42, k=1.2)
+
+    # Scale to [0,1] for consistency
+    xs = [pos2[n][0] for n in G2.nodes()]
+    ys = [pos2[n][1] for n in G2.nodes()]
+    min_x, max_x = min(xs), max(xs) or 1
+    min_y, max_y = min(ys), max(ys) or 1
+    for n in G2.nodes():
+        x, y = pos2[n][0], pos2[n][1]
+        pos2[n] = (
+            (x - min_x) / (max_x - min_x + 1e-9),
+            (y - min_y) / (max_y - min_y + 1e-9),
+        )
+
+    edge_x2, edge_y2 = [], []
+    for u, v in G2.edges():
+        x0, y0 = pos2[u]
+        x1, y1 = pos2[v]
+        edge_x2.extend([x0, x1, None])
+        edge_y2.extend([y0, y1, None])
+
+    node_x2 = [pos2[n][0] for n in G2.nodes()]
+    node_y2 = [pos2[n][1] for n in G2.nodes()]
+    node_labels2 = []
+    node_colors2 = []
+    for n in G2.nodes():
+        lab = G2.nodes[n].get("label", n)
+        line = G2.nodes[n].get("line", "")
+        node_labels2.append(f"{lab}\n(L{line})" if line else lab)
+        sev_level = node_severity.get(n, 0)
+        if sev_level >= 4:
+            node_colors2.append("#DC2626")
+        elif sev_level >= 3:
+            node_colors2.append("#EA580C")
+        elif sev_level >= 2:
+            node_colors2.append("#CA8A04")
+        else:
+            node_colors2.append("#10B981")
+
+    fig2 = go.Figure()
+    fig2.add_trace(
+        go.Scatter(
+            x=edge_x2, y=edge_y2,
+            mode="lines",
+            line=dict(color="#475569", width=2),
+            hoverinfo="none",
+        )
+    )
+    fig2.add_trace(
+        go.Scatter(
+            x=node_x2, y=node_y2,
+            mode="markers+text",
+            text=node_labels2,
+            textposition="top center",
+            textfont=dict(size=10, color="#E2E8F0"),
+            marker=dict(
+                size=28,
+                color=node_colors2,
+                line=dict(color="#1E293B", width=2),
+                symbol="circle",
+            ),
+            hovertemplate="%{text}<extra></extra>",
+        )
+    )
+    fig2.update_layout(
+        showlegend=False,
+        margin=dict(l=20, r=20, t=30, b=100),
+        height=400,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+    st.plotly_chart(fig2, use_container_width=True, key="map_level2")
+
+    st.markdown(
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:#64748B;">'
+        '<span><span style="display:inline-block;width:10px;height:10px;background:#DC2626;'
+        'border-radius:50%;vertical-align:middle;margin-right:4px;"></span> Critical</span>'
+        '<span><span style="display:inline-block;width:10px;height:10px;background:#EA580C;'
+        'border-radius:50%;vertical-align:middle;margin-right:4px;"></span> High</span>'
+        '<span><span style="display:inline-block;width:10px;height:10px;background:#CA8A04;'
+        'border-radius:50%;vertical-align:middle;margin-right:4px;"></span> Medium</span>'
+        '<span><span style="display:inline-block;width:10px;height:10px;background:#10B981;'
+        'border-radius:50%;vertical-align:middle;margin-right:4px;"></span> Low / source</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":

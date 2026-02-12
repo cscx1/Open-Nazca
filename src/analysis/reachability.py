@@ -56,12 +56,11 @@ class ReachabilityResult:
 
 _SANITISERS: Dict[str, Set[str]] = {
     "SQL Injection": {
-        "parameterized", "prepare", "escape_string",
+        "escape_string",
         "sqlalchemy.text", "bindparam",
         # The presence of '?' or '%s' placeholders in the query string
     },
     "Command Injection": {
-        "shlex.quote", "shlex.split", "pipes.quote",
         "shell=False",
     },
     "Code Execution": {
@@ -144,16 +143,21 @@ class ReachabilityVerifier:
             if san.lower() in region.lower():
                 sanitisers_found.append(san)
 
-        # 2) SQL-specific: check for parameterised queries
+        # 2) SQL-specific: check for parameterised query usage on the sink call.
+        #    IMPORTANT: placeholders in earlier query construction are NOT proof
+        #    of safety (e.g., "SELECT ... %s" % user_input).
         if vuln_type == "SQL Injection":
-            if re.search(r"\?\s*[,)]", region) or re.search(r"%s\s*[,)]", region):
-                sanitisers_found.append("parameterised_placeholder")
+            sink_line_text = lines[sink_line - 1] if 1 <= sink_line <= len(lines) else ""
+            if re.search(r"\.execute\s*\(\s*[^,\)]+,\s*.+\)", sink_line_text):
+                sanitisers_found.append("parameterized_execute_args")
 
-        # 3) Command injection: check shell=False explicitly
+        # 3) Command injection: only treat explicit shell=False as a sanitiser.
+        #    shlex.quote() in nearby lines does not make shell=True safe.
         if vuln_type == "Command Injection":
-            if "shell=False" in region:
+            sink_line_text = lines[sink_line - 1] if 1 <= sink_line <= len(lines) else ""
+            if "shell=False" in sink_line_text:
                 sanitisers_found.append("shell=False")
-            elif "shell=True" in region:
+            elif "shell=True" in sink_line_text:
                 # Explicitly dangerous — no sanitisation
                 pass
 

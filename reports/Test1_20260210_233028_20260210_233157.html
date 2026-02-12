@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnightCheck Security Scan Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .scan-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .summary-card .count {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .critical { color: #dc3545; }
+        .high { color: #fd7e14; }
+        .medium { color: #ffc107; }
+        .low { color: #0dcaf0; }
+        .finding {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .finding.critical { border-left-color: #dc3545; }
+        .finding.high { border-left-color: #fd7e14; }
+        .finding.medium { border-left-color: #ffc107; }
+        .finding.low { border-left-color: #0dcaf0; }
+        .finding h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .finding .severity-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 15px;
+        }
+        .finding .code-snippet {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+        }
+        .finding .section {
+            margin: 15px 0;
+        }
+        .finding .section-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔒 KnightCheck Security Scan Report</h1>
+        <p>Automated vulnerability detection for AI systems</p>
+    </div>
+
+    <div class="scan-info">
+        <h2>Scan Information</h2>
+        <p><strong>File:</strong> Test1_20260210_233028.py</p>
+        <p><strong>Language:</strong> python</p>
+        <p><strong>Scan Time:</strong> 2026-02-10 23:31:57</p>
+        <p><strong>Scan ID:</strong> eac3cdc9-e39f-4987-beb8-1b9ba84b5de8</p>
+    </div>
+
+    <h2>Summary</h2>
+    <div class="summary">
+        <div class="summary-card">
+            <h3>Critical</h3>
+            <div class="count critical">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>High</h3>
+            <div class="count high">38</div>
+        </div>
+        <div class="summary-card">
+            <h3>Medium</h3>
+            <div class="count medium">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>Low</h3>
+            <div class="count low">0</div>
+        </div>
+    </div>
+
+    <h2>Detailed Findings</h2>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 536</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>533   |             return obj if not callable(obj) else None
+534   | 
+535   |         return [
+536 → |             {key: noncallable(getattr(field, key)) for key in keys}
+537   |             for field in self
+538   |             if field.readable and not field.type == &quot;password&quot;
+539   |         ]
+540   | </pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 615</strong> in function <code>_validate</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>612   |     def _validate(self, **vars):
+613   |         errors = Row()
+614   |         for key, value in iteritems(vars):
+615 → |             value, error = getattr(self, key).validate(value, vars.get(&quot;id&quot;))
+616   |             if error:
+617   |                 errors[key] = error
+618   |         return errors
+619   | </pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 709</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>706   |                 # include fields if
+707   |                 if (
+708   |                     k in self.fields
+709 → |                     and (allow_id or getattr(self, k).type != &quot;id&quot;)  # are valid
+710   |                     and (not writable_only or getattr(self, k).writable)  # are not ids
+711   |                 )  # are writable
+712   |             ]
+713   |         )</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 710</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>707   |                 if (
+708   |                     k in self.fields
+709   |                     and (allow_id or getattr(self, k).type != &quot;id&quot;)  # are valid
+710 → |                     and (not writable_only or getattr(self, k).writable)  # are not ids
+711   |                 )  # are writable
+712   |             ]
+713   |         )
+714   | </pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 721</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>718   |         for k, v in iteritems(key):
+719   |             if k in self._primarykey:
+720   |                 if query:
+721 → |                     query = query &amp; (getattr(self, k) == v)
+722   |                 else:
+723   |                     query = getattr(self, k) == v
+724   |             else:
+725   |                 raise SyntaxError(</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 723</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>720   |                 if query:
+721   |                     query = query &amp; (getattr(self, k) == v)
+722   |                 else:
+723 → |                     query = getattr(self, k) == v
+724   |             else:
+725   |                 raise SyntaxError(
+726   |                     &quot;Field %s is not part of the primary key of %s&quot;
+727   |                     % (k, self._tablename)</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 747</strong> in function <code>__call__</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>744   |             )
+745   |         elif key is not None:
+746   |             try:
+747 → |                 return getattr(self, key)
+748   |             except:
+749   |                 raise KeyError(key)
+750   | 
+751   |     def __call__(self, key=DEFAULT, **kwargs):</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 793</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>790   |         elif kwargs:
+791   |             query = reduce(
+792   |                 lambda a, b: a &amp; b,
+793 → |                 [getattr(self, k) == v for k, v in iteritems(kwargs)],
+794   |             )
+795   |             return (
+796   |                 self._db(query)
+797   |                 .select(</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 856</strong> in function <code>__iter__</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>853   | 
+854   |     def __iter__(self):
+855   |         for fieldname in self.fields:
+856 → |             yield getattr(self, fieldname)
+857   | 
+858   |     def __repr__(self):
+859   |         return &quot;&lt;Table %s (%s)&gt;&quot; % (self._tablename, &quot;, &quot;.join(self.fields()))
+860   | </pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 905</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>902   |         table_fieldnames = set(self.fields)
+903   |         empty_fieldnames = OrderedDict((name, name) for name in self.fields)
+904   |         for name in list(input_fieldnames &amp; table_fieldnames):
+905 → |             field = getattr(self, name)
+906   |             value = fields[name]
+907   |             if field.filter_in and not isinstance(value, Expression):
+908   |                 if callable(value):
+909   |                     value = value()</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 944</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>941   |         empty_fieldnames, new_fields = self._filter_fields_for_operation(fields)
+942   |         to_compute = []
+943   |         for name in empty_fieldnames:
+944 → |             field = getattr(self, name)
+945   |             if field.compute:
+946   |                 to_compute.append((name, field))
+947   |             elif field.default is not None:
+948   |                 new_fields[name] = (field, field.default)</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 957</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>954   |         empty_fieldnames, new_fields = self._filter_fields_for_operation(fields)
+955   |         to_compute = []
+956   |         for name in empty_fieldnames:
+957 → |             field = getattr(self, name)
+958   |             if field.compute:
+959   |                 to_compute.append((name, field))
+960   |             if field.update is not None:
+961   |                 new_fields[name] = (field, field.update)</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1063</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1060   |                 query = None
+1061   |                 for key, value in iteritems(_key):
+1062   |                     if query is None:
+1063 → |                         query = getattr(self, key) == value
+1064   |                     else:
+1065   |                         query = query &amp; (getattr(self, key) == value)
+1066   |                 myset = self._db(query)
+1067   |             updated = myset.update(**new_fields)</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1065</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1062   |                     if query is None:
+1063   |                         query = getattr(self, key) == value
+1064   |                     else:
+1065 → |                         query = query &amp; (getattr(self, key) == value)
+1066   |                 myset = self._db(query)
+1067   |             updated = myset.update(**new_fields)
+1068   |         return {&quot;id&quot;: record and record.id, &quot;updated&quot;: updated, &quot;errors&quot;: errors}
+1069   | </pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1096</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1093   |             else:
+1094   |                 required_keys = {}
+1095   |                 for key, value in iteritems(fields):
+1096 → |                     if getattr(self, key).required:
+1097   |                         required_keys[key] = value
+1098   |                 record = self(**required_keys)
+1099   |                 _key = required_keys
+1100   |         elif isinstance(_key, dict):</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1110</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1107   |             if hasattr(self, &quot;_primarykey&quot;):
+1108   |                 primary_keys = {}
+1109   |                 for key in self._primarykey:
+1110 → |                     primary_keys[key] = getattr(record, key)
+1111   |                 response[&quot;id&quot;] = primary_keys
+1112   |         else:
+1113   |             response = self.validate_and_insert(**fields)
+1114   |         return response</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1231</strong> in function <code>is_id</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1228   | 
+1229   |         def is_id(colname):
+1230   |             if colname in self:
+1231 → |                 return getattr(self, colname).type == &quot;id&quot;
+1232   |             else:
+1233   |                 return False
+1234   | 
+1235   |         first = True</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1249</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1246   |                     if is_id(colname):
+1247   |                         cid = colname
+1248   |                     elif colname in self.fields:
+1249 → |                         cols[colname] = getattr(self, colname)
+1250   |                     if colname == unique:
+1251   |                         unique_idx = i
+1252   |             elif len(line) == len(colnames):
+1253   |                 # every other line contains instead data</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1283</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1280   |                         )
+1281   |                     # create new id until we get the same as old_id+offset
+1282   |                     while curr_id &lt; csv_id + id_offset[self._tablename]:
+1283 → |                         self._db(getattr(self, cid) == curr_id).delete()
+1284   |                         curr_id = inserting(**ditems)
+1285   |                 # Validation. Check for duplicate of &#x27;unique&#x27; &amp;,
+1286   |                 # if present, update instead of insert.
+1287   |                 elif not unique_idx:</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1291</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1288   |                     new_id = inserting(**ditems)
+1289   |                 else:
+1290   |                     unique_value = line[unique_idx]
+1291 → |                     query = getattr(self, unique) == unique_value
+1292   |                     record = self._db(query).select().first()
+1293   |                     if record:
+1294   |                         record.update_record(**ditems)
+1295   |                         new_id = record[self._id.name]</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1332</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1329   |         other[&quot;ALL&quot;] = SQLALL(other)
+1330   |         other[&quot;_tablename&quot;] = alias
+1331   |         for fieldname in other.fields:
+1332 → |             tmp = getattr(self, fieldname).clone()
+1333   |             tmp.bind(other)
+1334   |             other[fieldname] = tmp
+1335   |         if &quot;id&quot; in self and &quot;id&quot; not in other.fields:
+1336   |             other[&quot;id&quot;] = other[self.id.name]</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1401</strong> in function <code>__getitem__</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1398   | 
+1399   |     def __getitem__(self, key):
+1400   |         try:
+1401 → |             return getattr(self, key)
+1402   |         except AttributeError:
+1403   |             raise KeyError(key)
+1404   | 
+1405   |     def __setitem__(self, key, value):</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Attribute Injection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1560</strong> in function <code>__new__</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            setattr() called with a non-literal attribute name. An attacker controlling the attribute name can overwrite critical object attributes (is_admin, __class__, etc.) leading to privilege escalation or code execution.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>1557   | 
+1558   |     def __new__(cls, *args, **kwargs):
+1559   |         for name, wrapper in iteritems(cls._dialect_expressions_):
+1560 → |             setattr(cls, name, _expression_wrap(wrapper))
+1561   |         new_cls = super(Expression, cls).__new__(cls)
+1562   |         return new_cls
+1563   | 
+1564   |     def __init__(</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.AI.100-1.pdf, Page 21 An attacker controlling the attribute name can overwrite critical object attributes, leading to privilege escalation or code execution. This vulnerability aligns with the NIST&#x27;s concern about connecting technical aspects of AI system design and development to organizational values and principles, and enabling organizational practices and competencies for the individuals involved in acquiring, training, deploying, and monitoring such systems.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>To mitigate this risk, avoid using non-literal attribute names with setattr(). Instead, use a
+hardcoded list of allowed attribute names and validate user input against this list before using it
+with setattr().</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Attribute Injection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2222</strong> in function <code>_todate</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            setattr() called with a non-literal attribute name. An attacker controlling the attribute name can overwrite critical object attributes (is_admin, __class__, etc.) leading to privilege escalation or code execution.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>2219   |             stype = self.type.type
+2220   |         self._itype = REGEX_TYPE.match(stype).group(0) if stype else None
+2221   |         for key in others:
+2222 → |             setattr(self, key, others[key])
+2223   | 
+2224   |     @staticmethod
+2225   |     def _todate(value, regex=re.compile(r&quot;^\d\d\d\d-\d\d-\d\d$&quot;)):
+2226   |         if value is None:</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.AI.100-1.pdf, Page 21 An attacker controlling the attribute name can overwrite critical object attributes leading to privilege escalation or code execution. This vulnerability aligns with the risks described in NIST.AI.100-1.pdf, where it discusses the potential for misuse of AI systems due to poor design and development practices.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Avoid using setattr() with non-literal attribute names. Instead, use a dictionary to store dynamic
+attributes. This way, you can control which attributes can be set and prevent overwriting critical
+object attributes.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2528</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>2525   |         if not (sanitize and not (self.readable or self.writable)):
+2526   |             for attr in attrs:
+2527   |                 if flat:
+2528 → |                     d.update({attr: flatten(getattr(self, attr))})
+2529   |                 else:
+2530   |                     d.update({attr: getattr(self, attr)})
+2531   |             d[&quot;fieldname&quot;] = d.pop(&quot;name&quot;)
+2532   |         return d</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2530</strong> in function <code>referenced_field</code><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>2527   |                 if flat:
+2528   |                     d.update({attr: flatten(getattr(self, attr))})
+2529   |                 else:
+2530 → |                     d.update({attr: getattr(self, attr)})
+2531   |             d[&quot;fieldname&quot;] = d.pop(&quot;name&quot;)
+2532   |         return d
+2533   | 
+2534   |     def referenced_field(self):</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Unsafe Reflection</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 3506</strong><br>
+            Detector: UnsafeReflectionDetector | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>3503   |                 updated = False
+3504   |                 for attribute in attributes:
+3505   |                     if attribute[0] != &quot;_&quot;:
+3506 → |                         method = getattr(virtualfields, attribute)
+3507   |                         if hasattr(method, &quot;__lazy__&quot;):
+3508   |                             box[attribute] = VirtualCommand(method, row)
+3509   |                         elif type(method) == types.MethodType:
+3510   |                             if not updated:</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Mass Assignment</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2289</strong> in function <code>clone</code><br>
+            Detector: TypeConfusionDetector | 
+            Confidence: 88%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            __dict__.update() called with external data. This overwrites all object attributes at once, allowing attackers to inject arbitrary attributes.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>2285   |     def clone(self, point_self_references_to=False, **args):
+2286   |         field = copy.copy(self)
+2287   |         if point_self_references_to and self.type == &quot;reference %s&quot; % self._tablename:
+2288   |             field.type = &quot;reference %s&quot; % point_self_references_to
+2289 → |         field.__dict__.update(args)
+2290   |         field.db = field._db = None
+2291   |         field.table = field._table = None
+2292   |         field.tablename = field._tablename = None
+2293   |         if self._db and self._rname == self._db._adapter.sqlsafe_field(self.name):
+2294   |             # Reset the name because it may need to be requoted by bind()</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None __dict__.update() called with external data. This overwrites all object attributes at once, allowing attackers to inject arbitrary attributes.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Mass Assignment</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 3511</strong> in function <code>__add__</code><br>
+            Detector: TypeConfusionDetector | 
+            Confidence: 88%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            __dict__.update() called with external data. This overwrites all object attributes at once, allowing attackers to inject arbitrary attributes.
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre>3507   |                         if hasattr(method, &quot;__lazy__&quot;):
+3508   |                             box[attribute] = VirtualCommand(method, row)
+3509   |                         elif type(method) == types.MethodType:
+3510   |                             if not updated:
+3511 → |                                 virtualfields.__dict__.update(row)
+3512   |                                 updated = True
+3513   |                             box[attribute] = method()
+3514   |         return self
+3515   | 
+3516   |     def __add__(self, other):</pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None __dict__.update() called with external data. This overwrites all object attributes at once, allowing attackers to inject arbitrary attributes.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>ReDoS</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 275</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches re.match()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from field (line 263) to re.match (line 275) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>re.match</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>field</strong> <small>(line 263)</small> &rarr; <strong>re.match</strong> <small>(line 275)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None Tainted data reaches re.match()</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Code Execution</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1492</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches self._compile() via keyword &#x27;cte_collector&#x27;
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from cte_collector (line 1483) to self._compile (line 1492) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>self._compile</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>cte_collector</strong> <small>(line 1483)</small> &rarr; <strong>self._compile</strong> <small>(line 1492)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf, Page 21 The vulnerability lies in the use of tainted data, which is data that comes from an untrusted source and has not been properly sanitized. This can lead to code execution attacks, where an attacker can inject malicious code into your system, potentially taking control of it or stealing sensitive information.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Code Execution</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1506</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches r._compile() via keyword &#x27;cte_collector&#x27;
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from cte_collector (line 1483) to r._compile (line 1506) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>r._compile</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>cte_collector</strong> <small>(line 1483)</small> &rarr; <strong>r._compile</strong> <small>(line 1506)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf The vulnerability lies in the use of tainted data, which is data that comes from an untrusted source and has not been properly sanitized. This data can be manipulated by an attacker to execute arbitrary code on the system, potentially leading to unauthorized access, data theft, or system damage.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Code Execution</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 1521</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches self._compile()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from outer_scoped (line 1516) to self._compile (line 1521) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>self._compile</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>outer_scoped</strong> <small>(line 1516)</small> &rarr; <strong>self._compile</strong> <small>(line 1521)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf The vulnerability lies in the use of tainted data, which is data that comes from an untrusted source and has not been properly sanitized or validated. This can lead to code execution attacks, where an attacker can inject malicious code into your system, potentially leading to unauthorized access, data theft, or system damage.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>ReDoS</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2309</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches re.search()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from file (line 2298) to re.search (line 2309) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>re.search</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>file</strong> <small>(line 2298)</small> &rarr; <strong>file</strong> <small>(line 2305)</small> &rarr; <strong>filename</strong> <small>(line 2307)</small> &rarr; <strong>re.search</strong> <small>(line 2309)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None Tainted data reaches re.search()</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Path Traversal</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2353</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches open()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#198754;color:white;font-size:0.85em;font-weight:bold;">
+                Reachability Eliminated
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Sanitiser(s) detected between source (line 2298) and sink (line 2353): os.path.basename. Reachability is considered eliminated, though manual confirmation of sanitiser effectiveness is recommended.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>open</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>path</strong> <small>(line 2298)</small> &rarr; <strong>path</strong> <small>(line 2347)</small> &rarr; <strong>pathfilename</strong> <small>(line 2352)</small> &rarr; <strong>open</strong> <small>(line 2353)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf, Informative References section. The vulnerability lies in the use of tainted data, which is data that comes from an untrusted source and has not been properly sanitized, reaching the open() function. This can lead to a Path Traversal attack, where an attacker can manipulate the input to access files or directories that are outside of the intended directory, potentially exposing sensitive data or allowing unauthorized actions.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Path Traversal</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2389</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches self.uploadfs.open()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from name (line 2364) to self.uploadfs.open (line 2389) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>self.uploadfs.open</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>name</strong> <small>(line 2364)</small> &rarr; <strong>self.uploadfs.open</strong> <small>(line 2389)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf, Informative References. The vulnerability allows unauthorized access to files and directories on the server, potentially exposing sensitive data or enabling malicious actions. This maps to the NIST.SP.800-218A guideline&#x27;s concern about protecting federal information systems from security threats.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Implement input validation and sanitization for file paths to prevent Path Traversal attacks. Ensure
+that user-supplied data cannot be manipulated to access unauthorized files or directories.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>Path Traversal</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2397</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches open()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from name (line 2364) to open (line 2397) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>open</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>name</strong> <small>(line 2364)</small> &rarr; <strong>fullname</strong> <small>(line 2394)</small> &rarr; <strong>open</strong> <small>(line 2397)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: NIST.SP.800-218A.pdf, Informative References section. The vulnerability lies in the use of tainted data, which is data that comes from an untrusted source and has not been properly sanitized, reaching the open() function. This can lead to a Path Traversal attack, where an attacker can manipulate the input to access files or directories that are outside of the intended directory, potentially exposing sensitive data or allowing unauthorized actions.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="finding high">
+        <h3>ReDoS</h3>
+        <span class="severity-badge" style="background-color: #fd7e14;">
+            HIGH
+        </span>
+        
+        <div class="section">
+            <div class="section-title">📍 Location:</div>
+            <strong>Line 2401</strong><br>
+            Detector: StaticAnalysisPipeline | 
+            Confidence: 90%
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚠️ Issue:</div>
+            Tainted data reaches re.match()
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📄 Vulnerable Code:</div>
+            <div class="code-snippet"><pre></pre></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔍 Reachability:</div>
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                         background:#dc3545;color:white;font-size:0.85em;font-weight:bold;">
+                Confirmed Reachable
+            </span>
+            <p style="margin-top:8px;font-size:0.9em;color:#555;">Tainted data flows from name (line 2400) to re.match (line 2401) with no sanitiser detected. The path is considered reachable.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Sink API:</div>
+            <code>re.match</code>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🗺️ Attack Path:</div>
+            <div style="background:#f0f0f0;padding:10px;border-radius:4px;font-size:0.9em;">
+                <strong>name</strong> <small>(line 2400)</small> &rarr; <strong>re.match</strong> <small>(line 2401)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Risk Explanation:</div>
+            <p>📚 Source: None Tainted data reaches re.match()</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Suggested Fix:</div>
+            <p>Review and remediate this vulnerability following security best practices. Consult OWASP AI Security guidelines for specific guidance.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Generated by KnightCheck Security Scanner</p>
+        <p>Review all findings and implement suggested fixes to improve security</p>
+    </div>
+</body>
+</html>

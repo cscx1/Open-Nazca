@@ -1,5 +1,5 @@
 """
-Main Scanner Orchestrator for AI Code Breaker
+Main Scanner Orchestrator for KnightCheck
 Coordinates the complete security scanning workflow.
 
 Pipeline:
@@ -21,8 +21,27 @@ from .detectors import (
     PromptInjectionDetector,
     HardcodedSecretsDetector,
     OverprivilegedToolsDetector,
-    Finding
+    WeakRandomDetector,
+    WeakHashDetector,
+    XPathInjectionDetector,
+    XXEDetector,
+    DeserializationDetector,
+    SecureCookieDetector,
+    TrustBoundaryDetector,
+    LDAPInjectionDetector,
+    SQLInjectionDetector,
+    UnsafeReflectionDetector,
+    CryptoMisuseDetector,
+    TOCTOUDetector,
+    MemorySafetyDetector,
+    TypeConfusionDetector,
+    LogInjectionDetector,
+    XSSDetector,
+    EvasionPatternsDetector,
+    OperationalSecurityDetector,
+    Finding,
 )
+from .detectors.vuln_ownership import is_owner
 from .llm_reasoning import LLMAnalyzer
 from .snowflake_integration import SnowflakeClient
 from .report_generation import ReportGenerator
@@ -55,7 +74,7 @@ class AICodeScanner:
         max_file_size_mb: int = 10
     ):
         """
-        Initialize the AI Code Scanner.
+        Initialize the KnightCheck Scanner.
         
         Args:
             use_snowflake: Whether to store results in Snowflake
@@ -65,7 +84,7 @@ class AICodeScanner:
         """
         self.use_snowflake = use_snowflake
         self.use_llm_analysis = use_llm_analysis
-        logger.info("Initializing AI Code Scanner...")
+        logger.info("Initializing KnightCheck Scanner...")
         
         self.ingestion = CodeIngestion(max_file_size_mb=max_file_size_mb)
         logger.info("✓ Code ingestion module loaded")
@@ -82,7 +101,25 @@ class AICodeScanner:
         self.detectors = [
             PromptInjectionDetector(enabled=True),
             HardcodedSecretsDetector(enabled=True),
-            OverprivilegedToolsDetector(enabled=True)
+            OverprivilegedToolsDetector(enabled=True),
+            WeakRandomDetector(enabled=True),
+            WeakHashDetector(enabled=True),
+            SQLInjectionDetector(enabled=True),
+            XPathInjectionDetector(enabled=True),
+            XXEDetector(enabled=True),
+            DeserializationDetector(enabled=True),
+            SecureCookieDetector(enabled=True),
+            TrustBoundaryDetector(enabled=True),
+            LDAPInjectionDetector(enabled=True),
+            UnsafeReflectionDetector(enabled=True),
+            CryptoMisuseDetector(enabled=True),
+            TOCTOUDetector(enabled=True),
+            MemorySafetyDetector(enabled=True),
+            TypeConfusionDetector(enabled=True),
+            LogInjectionDetector(enabled=True),
+            XSSDetector(enabled=True),
+            EvasionPatternsDetector(enabled=True),
+            OperationalSecurityDetector(enabled=True),
         ]
         logger.info(f"✓ Loaded {len(self.detectors)} vulnerability detectors")
         
@@ -117,7 +154,7 @@ class AICodeScanner:
         self.report_generator = ReportGenerator()
         logger.info("✓ Report generator loaded")
         
-        logger.info("🚀 AI Code Scanner ready!")
+        logger.info("🚀 KnightCheck Scanner ready!")
     
     def scan_file(
         self,
@@ -215,6 +252,9 @@ class AICodeScanner:
                         all_findings = self._enrich_findings_with_analysis(
                             all_findings, reach_results
                         )
+                        # Re-run dedupe because enrichment can add AST-only findings
+                        # that overlap pattern findings on the same sink line.
+                        all_findings = self._deduplicate_findings(all_findings)
                         
                         attack_paths_data = [p.to_dict() for p in attack_paths]
                         reachability_data = [r.to_dict() for r in reach_results]
@@ -517,34 +557,55 @@ class AICodeScanner:
     def _deduplicate_findings(self, findings: List[Finding]) -> List[Finding]:
         """
         Remove duplicate findings on the same line for the same vulnerability type.
-        Keeps the finding with highest confidence.
-        
-        Args:
-            findings: List of all findings
-        
-        Returns:
-            Deduplicated list of findings
+        Prefers the finding from the canonical "owner" detector for that type,
+        then reachability strength, then confidence.
         """
-        # Key: (line_number, vulnerability_type)
-        # Value: Finding with highest confidence
+        alias_map = {
+            "attribute injection": "mass assignment",
+        }
         unique_findings: Dict[tuple, Finding] = {}
-        
+
         for finding in findings:
-            key = (finding.line_number, finding.vulnerability_type)
-            
+            normalized = alias_map.get(
+                finding.vulnerability_type.lower(), finding.vulnerability_type.lower()
+            )
+            key = (finding.line_number, normalized, finding.sink_api or "")
+
             if key not in unique_findings:
                 unique_findings[key] = finding
-            else:
-                # Keep the one with higher confidence
-                if finding.confidence > unique_findings[key].confidence:
-                    unique_findings[key] = finding
-        
+                continue
+
+            existing = unique_findings[key]
+            # Prefer owner: if one finding is from the canonical detector for this type, keep it.
+            existing_is_owner = is_owner(existing.detector_name, existing.vulnerability_type)
+            candidate_is_owner = is_owner(finding.detector_name, finding.vulnerability_type)
+            if candidate_is_owner and not existing_is_owner:
+                unique_findings[key] = finding
+                continue
+            if existing_is_owner and not candidate_is_owner:
+                continue
+            # Tie-break: reachability, then confidence.
+            existing_rank = self._reachability_rank(existing.reachability_status)
+            candidate_rank = self._reachability_rank(finding.reachability_status)
+            if candidate_rank > existing_rank:
+                unique_findings[key] = finding
+            elif candidate_rank == existing_rank and finding.confidence > existing.confidence:
+                unique_findings[key] = finding
+
         deduped = list(unique_findings.values())
-        
         if len(findings) != len(deduped):
             logger.info(f"  Deduplicated: {len(findings)} → {len(deduped)} findings")
-        
         return deduped
+
+    @staticmethod
+    def _reachability_rank(status: Optional[str]) -> int:
+        order = {
+            ReachabilityStatus.CONFIRMED_REACHABLE.value: 4,
+            ReachabilityStatus.REQUIRES_MANUAL_REVIEW.value: 3,
+            ReachabilityStatus.UNVERIFIABLE.value: 2,
+            ReachabilityStatus.REACHABILITY_ELIMINATED.value: 1,
+        }
+        return order.get(status or "", 0)
     
     def scan_directory(
         self,
@@ -617,7 +678,7 @@ if __name__ == "__main__":
     
     # Create scanner instance
     with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
-        print("AI Code Scanner initialized!")
+        print("KnightCheck Scanner initialized!")
         print("Ready to scan files. Example usage:")
         print("  results = scanner.scan_file('path/to/code.py')")
 

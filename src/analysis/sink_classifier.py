@@ -79,6 +79,16 @@ _reg("exec",                      "Code Execution", "CWE-95", "A03:2021", "CRITI
 _reg("compile",                   "Code Execution", "CWE-95", "A03:2021", "HIGH",
      "Tainted data reaches compile() — dynamic code compilation")
 
+# ── ReDoS (Regex Denial of Service) ─────────────────────────────
+_reg("re.compile",                "ReDoS", "CWE-1333", "A03:2021", "HIGH",
+     "User-controlled regex pattern reaches re.compile() — exponential backtracking possible")
+_reg("re.match",                  "ReDoS", "CWE-1333", "A03:2021", "HIGH",
+     "User-controlled regex pattern reaches re.match()")
+_reg("re.search",                 "ReDoS", "CWE-1333", "A03:2021", "HIGH",
+     "User-controlled regex pattern reaches re.search()")
+_reg("re.findall",                "ReDoS", "CWE-1333", "A03:2021", "HIGH",
+     "User-controlled regex pattern reaches re.findall()")
+
 # ── Path Traversal / File Operations ────────────────────────────
 _reg("open",                      "Path Traversal", "CWE-22",  "A01:2021", "HIGH",
      "Tainted data used as file path in open()")
@@ -136,6 +146,28 @@ _reg("flask.send_file",           "Path Traversal", "CWE-22",  "A01:2021", "HIGH
      "Tainted data used as file path in flask.send_file()")
 _reg("send_from_directory",       "Path Traversal", "CWE-22",  "A01:2021", "MEDIUM",
      "Tainted data used as filename in send_from_directory()")
+_reg("codecs.open",               "Path Traversal", "CWE-22",  "A01:2021", "HIGH",
+     "Tainted data used as file path in codecs.open()")
+
+# ── XPath Injection ─────────────────────────────────────────────
+_reg("lxml.etree.XPath",          "XPath Injection", "CWE-643", "A03:2021", "CRITICAL",
+     "Tainted data used in XPath expression via lxml")
+_reg("elementpath.select",        "XPath Injection", "CWE-643", "A03:2021", "CRITICAL",
+     "Tainted data used in XPath expression via elementpath")
+
+# ── LDAP Injection ──────────────────────────────────────────────
+_reg("conn.search",               "LDAP Injection", "CWE-90",  "A03:2021", "CRITICAL",
+     "Tainted data used in LDAP search filter")
+_reg("connection.search",         "LDAP Injection", "CWE-90",  "A03:2021", "CRITICAL",
+     "Tainted data used in LDAP search filter")
+
+# ── Deserialization ─────────────────────────────────────────────
+_reg("pickle.loads",              "Unsafe Deserialization", "CWE-502", "A08:2021", "CRITICAL",
+     "Tainted data deserialized via pickle.loads()")
+_reg("pickle.load",               "Unsafe Deserialization", "CWE-502", "A08:2021", "CRITICAL",
+     "Tainted data deserialized via pickle.load()")
+_reg("yaml.load",                 "Unsafe Deserialization", "CWE-502", "A08:2021", "CRITICAL",
+     "Tainted data deserialized via yaml.load()")
 
 
 # ── Classifier ───────────────────────────────────────────────────

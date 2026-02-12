@@ -1,0 +1,579 @@
+{
+  "scan_info": {
+    "scan_id": "local-1770745680",
+    "file_name": "Test2.py",
+    "language": "python",
+    "scan_timestamp": "2026-02-10 12:48:01",
+    "total_findings": 25
+  },
+  "summary": {
+    "total": 25,
+    "by_severity": {
+      "HIGH": 16,
+      "CRITICAL": 6,
+      "MEDIUM": 3
+    },
+    "by_type": {
+      "Weak Random": 1,
+      "Weak Hash": 1,
+      "XML External Entity (XXE)": 2,
+      "Unsafe Deserialization": 2,
+      "Code Execution": 1,
+      "Incomplete Blocklist": 1,
+      "Unsafe Dynamic Import": 1,
+      "Unsafe Reflection": 1,
+      "Attribute Injection": 1,
+      "Static IV/Nonce": 1,
+      "Path Traversal": 2,
+      "Unsafe C Library Access": 1,
+      "Pickle Exploitation Enabler": 1,
+      "Weak Attribute Guard": 1,
+      "Mass Assignment": 1,
+      "Prototype Pollution": 1,
+      "Log Injection": 1,
+      "Reflected XSS": 2,
+      "Command Injection": 1,
+      "SQL Injection": 1,
+      "ReDoS": 1
+    }
+  },
+  "reachability_summary": {
+    "Confirmed Reachable": 7,
+    "Reachability Eliminated": 0,
+    "Unverifiable": 0,
+    "Requires Manual Review": 0,
+    "Not Analysed": 18
+  },
+  "attack_paths": [],
+  "reachability": [],
+  "findings": [
+    {
+      "detector_name": "WeakRandomDetector",
+      "vulnerability_type": "Weak Random",
+      "severity": "HIGH",
+      "line_number": 357,
+      "code_snippet": "355   |     \n356   |     # Generate \"random\" token\n357 \u2192 |     token = ''.join(random.choices('abcdef0123456789', k=32))  # VULN: Weak randomness\n358   |     \n359   |     return token\n360   | ",
+      "description": "Non-cryptographic PRNG 'random.choices()' used. The standard `random` module uses Mersenne Twister which is predictable. For security-sensitive values (tokens, cookies, passwords) use `secrets` or `random.SystemRandom()`.",
+      "confidence": 0.92,
+      "cwe_id": "CWE-330",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "metadata": {
+        "weak_call": "random.choices"
+      }
+    },
+    {
+      "detector_name": "WeakHashDetector",
+      "vulnerability_type": "Weak Hash",
+      "severity": "HIGH",
+      "line_number": 104,
+      "code_snippet": "102   |     \n103   |     # \"Verify\" signature (but implementation is flawed)\n104 \u2192 |     expected_sig = hashlib.md5(payload + secret_key.encode()).digest()\n105   |     \n106   |     if signature == expected_sig:\n107   |         # VULN: Deserializing untrusted data",
+      "description": "Weak hashing algorithm 'md5' detected. Algorithms like MD5 and SHA-1 are cryptographically broken and vulnerable to collision attacks. Use SHA-256 or stronger for security-sensitive hashing.",
+      "confidence": 0.93,
+      "cwe_id": "CWE-328",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "metadata": {
+        "algorithm": "md5"
+      }
+    },
+    {
+      "detector_name": "XXEDetector",
+      "vulnerability_type": "XML External Entity (XXE)",
+      "severity": "HIGH",
+      "line_number": 121,
+      "code_snippet": "118   |     Severity: High\n119   |     \"\"\"\n120   |     # Disable DTD loading (but not completely)\n121 \u2192 |     parser = ET.XMLParser()\n122   |     \n123   |     # Parse XML\n124   |     root = ET.fromstring(xml_data, parser=parser)  # VULN: XXE if DTD not fully disabled\n125   |     ",
+      "description": "Stdlib XML parser used without defusedxml. Python's built-in XML parsers do not fully prevent XXE attacks. Replace with defusedxml equivalents.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-611",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "detection_type": "unsafe_xml_call"
+      }
+    },
+    {
+      "detector_name": "XXEDetector",
+      "vulnerability_type": "XML External Entity (XXE)",
+      "severity": "HIGH",
+      "line_number": 124,
+      "code_snippet": "121   |     parser = ET.XMLParser()\n122   |     \n123   |     # Parse XML\n124 \u2192 |     root = ET.fromstring(xml_data, parser=parser)  # VULN: XXE if DTD not fully disabled\n125   |     \n126   |     # Attack payload:\n127   |     # <?xml version=\"1.0\"?>\n128   |     # <!DOCTYPE foo [",
+      "description": "Stdlib XML parser used without defusedxml. Python's built-in XML parsers do not fully prevent XXE attacks. Replace with defusedxml equivalents.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-611",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "detection_type": "unsafe_xml_call"
+      }
+    },
+    {
+      "detector_name": "EvasionPatternsDetector",
+      "vulnerability_type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "line_number": 108,
+      "code_snippet": "105   |     \n106   |     if signature == expected_sig:\n107   |         # VULN: Deserializing untrusted data\n108 \u2192 |         obj = pickle.loads(payload)  # VULN: Arbitrary code execution\n109   |         return obj\n110   |     return None\n111   | \n112   | ",
+      "description": "Unsafe deserialization occurs after a signature/auth check. Authentication of bytes does not make pickle/yaml object construction safe; attacker-controlled signed payloads can still trigger gadget-based code execution.",
+      "confidence": 0.96,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "pattern": "signature_gate_then_unsafe_deserialization",
+        "sink": "pickle.loads"
+      }
+    },
+    {
+      "detector_name": "DeserializationDetector",
+      "vulnerability_type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "line_number": 379,
+      "code_snippet": "376   |     # VULN: Still vulnerable to other payloads\n377   |     # Can use anchors/references or other dangerous constructs\n378   |     \n379 \u2192 |     data = yaml.load(yaml_data, Loader=yaml.Loader)  # VULN: Unsafe YAML loading\n380   |     return data\n381   | \n382   | \n383   | # ============ VULNERABILITY 15: Type confusion/attribute injection ============",
+      "description": "Unsafe deserialization via yaml.load(): yaml.load can instantiate arbitrary Python objects. An attacker controlling the serialized payload can achieve remote code execution.",
+      "confidence": 0.92,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "sink": "yaml.load"
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from yaml_data (line 363) to yaml.load (line 379) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "yaml_data",
+          "file": "Test2.py",
+          "line": 363,
+          "detail": "Parameter 'yaml_data' of function 'vulnerable_yaml_load' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "yaml.load",
+          "file": "Test2.py",
+          "line": 379,
+          "detail": "Tainted data reaches yaml.load()"
+        },
+        "vulnerability_type": "Unsafe Deserialization",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-502"
+      },
+      "sink_api": "yaml.load"
+    },
+    {
+      "detector_name": "UnsafeReflectionDetector",
+      "vulnerability_type": "Code Execution",
+      "severity": "CRITICAL",
+      "line_number": 188,
+      "code_snippet": "185   |     # Actually execute Python code in template\n186   |     try:\n187   |         # Use eval to \"render\" expressions\n188 \u2192 |         result = eval(template, {\"__builtins__\": {}}, context)  # VULN: Code execution\n189   |         return str(result)\n190   |     except:\n191   |         return template\n192   | ",
+      "description": "eval() used as a template rendering engine with restricted builtins. This is a Server-Side Template Injection (SSTI) vulnerability. Attackers can escape the sandbox using __class__.__mro__ chains to achieve arbitrary code execution.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-95",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "matched_var": ""
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from template (line 168) to eval (line 188) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "template",
+          "file": "Test2.py",
+          "line": 168,
+          "detail": "Parameter 'template' of function 'vulnerable_template_render' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "eval",
+          "file": "Test2.py",
+          "line": 188,
+          "detail": "Tainted data reaches eval()"
+        },
+        "vulnerability_type": "Code Execution",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-95"
+      },
+      "sink_api": "eval"
+    },
+    {
+      "detector_name": "UnsafeReflectionDetector",
+      "vulnerability_type": "Incomplete Blocklist",
+      "severity": "HIGH",
+      "line_number": 202,
+      "code_snippet": "199   |     Severity: High\n200   |     \"\"\"\n201   |     # Blocklist attempt (incomplete)\n202 \u2192 |     blocked = [\"os\", \"subprocess\", \"sys\", \"ctypes\"]\n203   |     \n204   |     if module_name in blocked:\n205   |         raise ValueError(\"Module not allowed\")\n206   |     ",
+      "description": "Module/function blocklist detected. Blocklists are inherently incomplete \u2014 attackers can bypass by using submodules (os.path vs os), aliases, or __import__. Use an allowlist of permitted modules instead.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-184",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "matched_var": ""
+      }
+    },
+    {
+      "detector_name": "UnsafeReflectionDetector",
+      "vulnerability_type": "Unsafe Dynamic Import",
+      "severity": "CRITICAL",
+      "line_number": 211,
+      "code_snippet": "208   |     # Attack: module_name = \"os.path\" (bypasses blocklist)\n209   |     \n210   |     # Import module\n211 \u2192 |     module = __import__(module_name)  # VULN: Arbitrary import\n212   |     \n213   |     # Get function\n214   |     func = getattr(module, function_name)\n215   |     return func",
+      "description": "__import__() called with a non-literal argument. An attacker controlling the module name can import dangerous modules (os, subprocess, ctypes) and execute arbitrary code. Use an allowlist of permitted modules.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-470",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "matched_var": "module_name"
+      }
+    },
+    {
+      "detector_name": "UnsafeReflectionDetector",
+      "vulnerability_type": "Unsafe Reflection",
+      "severity": "HIGH",
+      "line_number": 214,
+      "code_snippet": "211   |     module = __import__(module_name)  # VULN: Arbitrary import\n212   |     \n213   |     # Get function\n214 \u2192 |     func = getattr(module, function_name)\n215   |     return func\n216   | \n217   | \n218   | # ============ VULNERABILITY 8: Race condition TOCTOU ============",
+      "description": "getattr() called with a non-literal attribute name. If the attribute name comes from user input, an attacker can access arbitrary attributes including private methods and dunder methods.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-470",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "matched_var": "function_name"
+      }
+    },
+    {
+      "detector_name": "UnsafeReflectionDetector",
+      "vulnerability_type": "Attribute Injection",
+      "severity": "HIGH",
+      "line_number": 404,
+      "code_snippet": "401   |     # VULN: Setting arbitrary attributes from untrusted data\n402   |     for key, value in data.items():\n403   |         if hasattr(user, key):\n404 \u2192 |             setattr(user, key, value)  # VULN: Attribute injection\n405   |     \n406   |     # Attack: data = {'username': 'admin', 'is_admin': True, '__class__': ...}\n407   |     # Can manipulate object internals\n408   |     ",
+      "description": "setattr() called with a non-literal attribute name. An attacker controlling the attribute name can overwrite critical object attributes (is_admin, __class__, etc.) leading to privilege escalation or code execution.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-915",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "matched_var": "key"
+      }
+    },
+    {
+      "detector_name": "CryptoMisuseDetector",
+      "vulnerability_type": "Static IV/Nonce",
+      "severity": "HIGH",
+      "line_number": 260,
+      "code_snippet": "257   |         import os\n258   |         \n259   |         # Use static IV (BAD!)\n260 \u2192 |         iv = b\"1234567890123456\"  # VULN: Static IV\n261   |         \n262   |         cipher = AES.new(self.key, AES.MODE_CBC, iv)\n263   |         ciphertext = cipher.encrypt(pad(plaintext.encode(), AES.block_size))\n264   |         ",
+      "description": "Hardcoded IV or nonce detected. Using a static IV with CBC mode allows attackers to detect repeated plaintexts. IVs must be randomly generated for each encryption operation using os.urandom().",
+      "confidence": 0.92,
+      "cwe_id": "CWE-329",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "metadata": {}
+    },
+    {
+      "detector_name": "TOCTOUDetector",
+      "vulnerability_type": "Path Traversal",
+      "severity": "HIGH",
+      "line_number": 237,
+      "code_snippet": "233   |     # Between check and write, attacker can replace file with symlink\n234   |     # VULN: Time-of-check to time-of-use race condition\n235   |     \n236   |     # Write to file\n237 \u2192 |     with open(filename, 'w') as f:  # VULN: Race condition\n238   |         f.write(data)\n239   |     \n240   |     return True\n241   | \n242   | ",
+      "description": "Time-of-check to time-of-use (TOCTOU) race condition: file 'filename' is checked on line 230 then used on line 237. Between check and use, an attacker can replace the file with a symlink to a sensitive resource. Use atomic operations or open-then-check patterns.",
+      "confidence": 0.85,
+      "cwe_id": "CWE-22",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "check_line": 230,
+        "use_line": 237,
+        "file_var": "filename"
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from filename (line 219) to open (line 237) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "filename",
+          "file": "Test2.py",
+          "line": 219,
+          "detail": "Parameter 'filename' of function 'vulnerable_file_race' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "open",
+          "file": "Test2.py",
+          "line": 237,
+          "detail": "Tainted data reaches open()"
+        },
+        "vulnerability_type": "Path Traversal",
+        "severity": "HIGH",
+        "cwe_id": "CWE-22"
+      },
+      "sink_api": "open"
+    },
+    {
+      "detector_name": "MemorySafetyDetector",
+      "vulnerability_type": "Unsafe C Library Access",
+      "severity": "HIGH",
+      "line_number": 286,
+      "code_snippet": "283   |     Severity: Critical\n284   |     \"\"\"\n285   |     # Load C library\n286 \u2192 |     libc = ctypes.CDLL(None)\n287   |     \n288   |     # Get memcpy function\n289   |     memcpy = libc.memcpy\n290   |     ",
+      "description": "Loading libc via ctypes.CDLL(None) provides direct access to C functions (memcpy, system, etc.) without Python's safety guarantees. Buffer overflows and memory corruption become possible.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-119",
+      "owasp_category": "A06:2021 \u2013 Vulnerable and Outdated Components",
+      "metadata": {}
+    },
+    {
+      "detector_name": "TypeConfusionDetector",
+      "vulnerability_type": "Pickle Exploitation Enabler",
+      "severity": "MEDIUM",
+      "line_number": 85,
+      "code_snippet": " 81   | \n 82   | \n 83   | # ============ VULNERABILITY 3: Deserialization attack with signed pickle ============\n 84   | class MaliciousPickle:\n 85 \u2192 |     def __reduce__(self):\n 86   |         \"\"\"\n 87   |         Pickle deserialization RCE payload\n 88   |         \"\"\"\n 89   |         import os\n 90   |         return (os.system, ('echo \"PWNED\" > /tmp/hacked',))",
+      "description": "__reduce__ method defined. This method controls pickle serialization behavior and can be used to craft malicious pickle payloads for RCE. If this class instances are ever deserialized from untrusted data, arbitrary code execution is possible.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {}
+    },
+    {
+      "detector_name": "TypeConfusionDetector",
+      "vulnerability_type": "Weak Attribute Guard",
+      "severity": "MEDIUM",
+      "line_number": 403,
+      "code_snippet": "399   |     user = User(data.get('username', 'guest'))\n400   |     \n401   |     # VULN: Setting arbitrary attributes from untrusted data\n402   |     for key, value in data.items():\n403 \u2192 |         if hasattr(user, key):\n404   |             setattr(user, key, value)  # VULN: Attribute injection\n405   |     \n406   |     # Attack: data = {'username': 'admin', 'is_admin': True, '__class__': ...}\n407   |     # Can manipulate object internals\n408   |     ",
+      "description": "hasattr() check used as a guard before setattr(). hasattr() returns True for most attributes including dunder methods, making it an insufficient guard against attribute injection. Use an explicit allowlist.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-915",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {}
+    },
+    {
+      "detector_name": "TypeConfusionDetector",
+      "vulnerability_type": "Mass Assignment",
+      "severity": "HIGH",
+      "line_number": 404,
+      "code_snippet": "400   |     \n401   |     # VULN: Setting arbitrary attributes from untrusted data\n402   |     for key, value in data.items():\n403   |         if hasattr(user, key):\n404 \u2192 |             setattr(user, key, value)  # VULN: Attribute injection\n405   |     \n406   |     # Attack: data = {'username': 'admin', 'is_admin': True, '__class__': ...}\n407   |     # Can manipulate object internals\n408   |     \n409   |     return user",
+      "description": "setattr() called in a loop over dictionary items. An attacker can inject arbitrary attributes including 'is_admin', '__class__', or '__dict__' to escalate privileges or corrupt object state. Use an allowlist of permitted attribute names.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-915",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {}
+    },
+    {
+      "detector_name": "TypeConfusionDetector",
+      "vulnerability_type": "Prototype Pollution",
+      "severity": "HIGH",
+      "line_number": 413,
+      "code_snippet": "409   |     return user\n410   | \n411   | \n412   | # ============ BONUS VULNERABILITY: Prototype pollution ============\n413 \u2192 | def vulnerable_dict_merge(target: Dict, source: Dict) -> Dict:\n414   |     \"\"\"\n415   |     Prototype pollution (Python style)\n416   |     Vulnerability: Modifying object prototypes\n417   |     Severity: High\n418   |     \"\"\"",
+      "description": "Recursive dictionary merge function without key validation. An attacker can inject '__class__', '__init__', or '__proto__' keys to modify object prototypes and corrupt application state.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-1321",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {}
+    },
+    {
+      "detector_name": "LogInjectionDetector",
+      "vulnerability_type": "Log Injection",
+      "severity": "MEDIUM",
+      "line_number": 322,
+      "code_snippet": "319   |         # Creates fake error log entry\n320   |         \n321   |         with open(self.log_file, 'a') as f:\n322 \u2192 |             f.write(log_entry)  # VULN: Log injection\n323   | \n324   | \n325   | # ============ VULNERABILITY 12: Regex DoS (ReDoS) ============\n326   | def vulnerable_regex_match(text: str, pattern: str) -> bool:",
+      "description": "User-controlled data (via 'log_entry') is written to log output without sanitization. An attacker can inject newline characters to forge log entries, hide malicious activity, or corrupt log analysis. Sanitize by stripping control characters.",
+      "confidence": 0.85,
+      "cwe_id": "CWE-117",
+      "owasp_category": "A09:2021 \u2013 Security Logging and Monitoring Failures",
+      "metadata": {
+        "tainted_var": "log_entry"
+      }
+    },
+    {
+      "detector_name": "XSSDetector",
+      "vulnerability_type": "Reflected XSS",
+      "severity": "HIGH",
+      "line_number": 445,
+      "code_snippet": "441   |         # VULN: Reflected XSS\n442   |         name = query.get('name', [''])[0]\n443   |         \n444   |         # Send response\n445 \u2192 |         self.send_response(200)\n446   |         self.send_header('Content-type', 'text/html')\n447   |         self.end_headers()\n448   |         \n449   |         # VULN: XSS - user input directly in response\n450   |         response = f\"\"\"",
+      "description": "User-controlled variable 'query' is included in HTTP response without HTML escaping. An attacker can inject JavaScript via crafted input to steal cookies, redirect users, or deface pages. Use html.escape() or a template engine with auto-escaping.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-79",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "user_var": "query"
+      }
+    },
+    {
+      "detector_name": "XSSDetector",
+      "vulnerability_type": "Reflected XSS",
+      "severity": "HIGH",
+      "line_number": 450,
+      "code_snippet": "446   |         self.send_header('Content-type', 'text/html')\n447   |         self.end_headers()\n448   |         \n449   |         # VULN: XSS - user input directly in response\n450 \u2192 |         response = f\"\"\"\n451   |         <html>\n452   |         <body>\n453   |             <h1>Welcome, {name}!</h1>  <!-- VULN: Reflected XSS -->\n454   |             <p>Your user agent: {self.headers.get('User-Agent')}</p>\n455   |         </body>",
+      "description": "User-controlled variable 'name' is included in HTTP response without HTML escaping. An attacker can inject JavaScript via crafted input to steal cookies, redirect users, or deface pages. Use html.escape() or a template engine with auto-escaping.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-79",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "user_var": "name"
+      }
+    },
+    {
+      "detector_name": "EvasionPatternsDetector",
+      "vulnerability_type": "Path Traversal",
+      "severity": "HIGH",
+      "line_number": 153,
+      "code_snippet": "150   |         raise ValueError(\"Directory traversal not allowed\")\n151   |     \n152   |     # Join paths\n153 \u2192 |     full_path = os.path.join(base_dir, filepath)\n154   |     \n155   |     # Check if path is within base directory\n156   |     if not os.path.commonpath([base_dir, full_path]) == base_dir:\n157   |         raise ValueError(\"Access denied\")",
+      "description": "Path validation uses ASCII-only '..' checks without unicode/encoding normalization. Encoded separators or homoglyphs can bypass this guard.",
+      "confidence": 0.93,
+      "cwe_id": "CWE-22",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "pattern": "unicode_traversal_bypass",
+        "path_var": "filepath"
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from filepath (line 140) to open (line 163) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "filepath",
+          "file": "Test2.py",
+          "line": 140,
+          "detail": "Parameter 'filepath' of function 'vulnerable_file_read' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "full_path",
+            "file": "Test2.py",
+            "line": 153,
+            "detail": "Variable 'full_path' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "open",
+          "file": "Test2.py",
+          "line": 163,
+          "detail": "Tainted data reaches open()"
+        },
+        "vulnerability_type": "Path Traversal",
+        "severity": "HIGH",
+        "cwe_id": "CWE-22"
+      },
+      "sink_api": "open"
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Command Injection",
+      "severity": "CRITICAL",
+      "line_number": 54,
+      "code_snippet": "",
+      "description": "Tainted data reaches subprocess.check_output()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-78",
+      "owasp_category": null,
+      "metadata": {},
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from filename (line 36) to subprocess.check_output (line 54) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "filename",
+          "file": "Test2.py",
+          "line": 36,
+          "detail": "Parameter 'filename' of function 'vulnerable_file_operation' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "user_input",
+            "file": "Test2.py",
+            "line": 43,
+            "detail": "Variable 'user_input' receives tainted data"
+          },
+          {
+            "name": "safe_looking",
+            "file": "Test2.py",
+            "line": 46,
+            "detail": "Variable 'safe_looking' receives tainted data"
+          },
+          {
+            "name": "f-string",
+            "file": "Test2.py",
+            "line": 51,
+            "detail": "Tainted value interpolated into f-string"
+          },
+          {
+            "name": "command",
+            "file": "Test2.py",
+            "line": 51,
+            "detail": "Variable 'command' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "subprocess.check_output",
+          "file": "Test2.py",
+          "line": 54,
+          "detail": "Tainted data reaches subprocess.check_output()"
+        },
+        "vulnerability_type": "Command Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-78"
+      },
+      "sink_api": "subprocess.check_output"
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "SQL Injection",
+      "severity": "CRITICAL",
+      "line_number": 78,
+      "code_snippet": "",
+      "description": "Tainted data reaches self.cursor.execute()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-89",
+      "owasp_category": null,
+      "metadata": {},
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from user_id (line 67) to self.cursor.execute (line 78) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "user_id",
+          "file": "Test2.py",
+          "line": 67,
+          "detail": "Parameter 'user_id' of function 'get_user_secret' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "%-format",
+            "file": "Test2.py",
+            "line": 74,
+            "detail": "Tainted value used in %-formatting"
+          },
+          {
+            "name": "query",
+            "file": "Test2.py",
+            "line": 74,
+            "detail": "Variable 'query' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "self.cursor.execute",
+          "file": "Test2.py",
+          "line": 78,
+          "detail": "Tainted data reaches self.cursor.execute()"
+        },
+        "vulnerability_type": "SQL Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-89"
+      },
+      "sink_api": "self.cursor.execute"
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "ReDoS",
+      "severity": "HIGH",
+      "line_number": 337,
+      "code_snippet": "",
+      "description": "Tainted data reaches re.compile()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-1333",
+      "owasp_category": null,
+      "metadata": {},
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from pattern (line 326) to re.compile (line 337) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "pattern",
+          "file": "Test2.py",
+          "line": 326,
+          "detail": "Parameter 'pattern' of function 'vulnerable_regex_match' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "re.compile",
+          "file": "Test2.py",
+          "line": 337,
+          "detail": "Tainted data reaches re.compile()"
+        },
+        "vulnerability_type": "ReDoS",
+        "severity": "HIGH",
+        "cwe_id": "CWE-1333"
+      },
+      "sink_api": "re.compile"
+    }
+  ]
+}

@@ -124,9 +124,14 @@ class OverprivilegedToolsDetector(BaseDetector):
                         for pattern in self.tool_definition_patterns
                     )
                     
-                    # Higher severity if explicitly in agent context
-                    severity = "HIGH" if (in_agent_context or is_tool_definition) else "MEDIUM"
-                    confidence = 0.90 if (in_agent_context or is_tool_definition) else 0.70
+                    # ONLY report if in agent/tool context.
+                    # Without AI context, shell=True / eval / os.system
+                    # are handled by other detectors (command injection, etc.)
+                    if not in_agent_context and not is_tool_definition:
+                        continue
+                    
+                    severity = "HIGH"
+                    confidence = 0.90
                     
                     # Extract snippet
                     snippet = self.extract_code_snippet(code, line_num, context_lines=3)

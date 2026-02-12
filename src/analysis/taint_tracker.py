@@ -96,9 +96,12 @@ _QUICK_SINK_NAMES: Set[str] = {
     "subprocess.Popen", "subprocess.check_output",
     # Code execution
     "eval", "exec", "compile",
+    # ReDoS
+    "re.compile", "re.match", "re.search", "re.findall",
     # File system
     "open", "os.remove", "os.unlink", "shutil.rmtree",
     "send_file", "flask.send_file", "send_from_directory",
+    "codecs.open",
     # Network
     "requests.get", "requests.post", "requests.put",
     "urllib.request.urlopen", "httpx.get", "httpx.post",
@@ -110,6 +113,12 @@ _QUICK_SINK_NAMES: Set[str] = {
     "anthropic.Anthropic", "anthropic.completions.create",
     # Template / XSS
     "render_template_string", "Markup", "jinja2.Template",
+    # XPath Injection
+    "lxml.etree.XPath", "elementpath.select",
+    # LDAP Injection
+    "conn.search", "connection.search",
+    # Deserialization
+    "pickle.loads", "pickle.load", "yaml.load",
 }
 
 

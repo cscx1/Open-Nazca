@@ -1,0 +1,119 @@
+{
+  "scan_info": {
+    "scan_id": "local-1770746820",
+    "file_name": "tmp_test3_patterns.py",
+    "language": "python",
+    "scan_timestamp": "2026-02-10 13:07:00",
+    "total_findings": 6
+  },
+  "summary": {
+    "total": 6,
+    "by_severity": {
+      "HIGH": 4,
+      "MEDIUM": 2
+    },
+    "by_type": {
+      "Unsafe File Upload": 1,
+      "Information Disclosure": 1,
+      "Open Redirect": 1,
+      "Memory Exhaustion": 1,
+      "Format String Injection": 1,
+      "Debug Mode Enabled": 1
+    }
+  },
+  "reachability_summary": {
+    "Confirmed Reachable": 0,
+    "Reachability Eliminated": 0,
+    "Unverifiable": 0,
+    "Requires Manual Review": 0,
+    "Not Analysed": 6
+  },
+  "attack_paths": [],
+  "reachability": [],
+  "findings": [
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Unsafe File Upload",
+      "severity": "HIGH",
+      "line_number": 9,
+      "code_snippet": "  6   | \n  7   | \n  8   | def demo_upload(file, filename):\n  9 \u2192 |     file.save(f\"/uploads/{filename}\")\n 10   | \n 11   | \n 12   | def demo_info():\n 13   |     return {\"env_vars\": dict(os.environ), \"version\": sys.version}",
+      "description": "Uploaded file is saved without robust filename/content validation. Use secure_filename(), extension allowlists, MIME checks, and size limits.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-434",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "pattern": "file_save_without_validation"
+      }
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Information Disclosure",
+      "severity": "MEDIUM",
+      "line_number": 13,
+      "code_snippet": " 10   | \n 11   | \n 12   | def demo_info():\n 13 \u2192 |     return {\"env_vars\": dict(os.environ), \"version\": sys.version}\n 14   | \n 15   | \n 16   | def demo_redirect():\n 17   |     url = request.args.get(\"next\")",
+      "description": "Sensitive runtime or system details are exposed to output. Avoid returning environment variables, version/build internals, or stack traces.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-200",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "sensitive_runtime_disclosure"
+      }
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Open Redirect",
+      "severity": "HIGH",
+      "line_number": 18,
+      "code_snippet": " 15   | \n 16   | def demo_redirect():\n 17   |     url = request.args.get(\"next\")\n 18 \u2192 |     return f'<meta refresh content=\"0; url={url}\">'\n 19   | \n 20   | \n 21   | def demo_mem():\n 22   |     data_size = request.args.get(\"n\")",
+      "description": "Redirect target appears user-controlled without an allowlist/host validation check.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-601",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "pattern": "unvalidated_redirect"
+      }
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Memory Exhaustion",
+      "severity": "HIGH",
+      "line_number": 23,
+      "code_snippet": " 20   | \n 21   | def demo_mem():\n 22   |     data_size = request.args.get(\"n\")\n 23 \u2192 |     data = \"A\" * int(data_size)\n 24   |     return len(data)\n 25   | \n 26   | \n 27   | def demo_fmt():",
+      "description": "User-influenced size is used for allocation without an upper bound. This can cause denial-of-service via memory exhaustion.",
+      "confidence": 0.91,
+      "cwe_id": "CWE-400",
+      "owasp_category": "A04:2021 \u2013 Insecure Design",
+      "metadata": {
+        "pattern": "unbounded_allocation"
+      }
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Format String Injection",
+      "severity": "MEDIUM",
+      "line_number": 29,
+      "code_snippet": " 26   | \n 27   | def demo_fmt():\n 28   |     user_fmt = request.args.get(\"fmt\")\n 29 \u2192 |     return user_fmt.format(name=\"x\")\n 30   | \n 31   | \n 32   | if __name__ == \"__main__\":\n 33   |     app.run(debug=True)",
+      "description": "User-controlled format template used with .format(). This can expose internals or alter rendered output.",
+      "confidence": 0.86,
+      "cwe_id": "CWE-134",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "pattern": "tainted_format_template"
+      }
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Debug Mode Enabled",
+      "severity": "HIGH",
+      "line_number": 33,
+      "code_snippet": " 30   | \n 31   | \n 32   | if __name__ == \"__main__\":\n 33 \u2192 |     app.run(debug=True)\n 34   | ",
+      "description": "Application is started with debug=True. In production this can expose interactive debugger and sensitive internals.",
+      "confidence": 0.95,
+      "cwe_id": "CWE-489",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "runtime_debug_true"
+      }
+    }
+  ]
+}

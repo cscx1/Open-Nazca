@@ -24,7 +24,7 @@ def setup_logging(verbose: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='🔒 AI Code Breaker - LLM Security Scanner',
+        description='🔒 KnightCheck - Security Scanner',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -133,14 +133,14 @@ Examples:
         parser.print_help()
         return 1
     
-    # Handle UI command
+    # Handle UI command (main app: KnightCheck Security Analytics)
     if args.command == 'ui':
         try:
             import streamlit.web.cli as stcli
             import sys
             
-            ui_path = str(Path(__file__).parent / 'ui' / 'streamlit_app.py')
-            sys.argv = ['streamlit', 'run', ui_path, '--server.port', str(args.port)]
+            app_path = str(Path(__file__).parent / 'app.py')
+            sys.argv = ['streamlit', 'run', app_path, '--server.port', str(args.port)]
             sys.exit(stcli.main())
         except ImportError:
             print("❌ Streamlit not installed. Run: pip install streamlit")

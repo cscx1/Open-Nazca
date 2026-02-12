@@ -1,0 +1,24 @@
+{
+  "scan_info": {
+    "scan_id": "local-1770777044",
+    "file_name": "tmp_fp_check.py",
+    "language": "python",
+    "scan_timestamp": "2026-02-10 21:30:44",
+    "total_findings": 0
+  },
+  "summary": {
+    "total": 0,
+    "by_severity": {},
+    "by_type": {}
+  },
+  "reachability_summary": {
+    "Confirmed Reachable": 0,
+    "Reachability Eliminated": 0,
+    "Unverifiable": 0,
+    "Requires Manual Review": 0,
+    "Not Analysed": 0
+  },
+  "attack_paths": [],
+  "reachability": [],
+  "findings": []
+}

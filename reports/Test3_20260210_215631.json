@@ -1,0 +1,1014 @@
+{
+  "scan_info": {
+    "scan_id": "local-1770778591",
+    "file_name": "Test3.py",
+    "language": "python",
+    "scan_timestamp": "2026-02-10 21:56:31",
+    "total_findings": 30
+  },
+  "summary": {
+    "total": 30,
+    "by_severity": {
+      "CRITICAL": 11,
+      "HIGH": 14,
+      "MEDIUM": 5
+    },
+    "by_type": {
+      "Hardcoded Secret": 2,
+      "Weak Random": 1,
+      "Weak Hash": 1,
+      "XML External Entity (XXE)": 1,
+      "Unsafe Deserialization": 3,
+      "Path Traversal": 2,
+      "Mass Assignment": 1,
+      "Reflected XSS": 2,
+      "Unsafe File Upload": 1,
+      "Information Disclosure": 2,
+      "Memory Exhaustion": 1,
+      "Debug Mode Enabled": 1,
+      "Missing Security Headers": 1,
+      "Missing CSRF Protection": 1,
+      "Missing Rate Limiting": 2,
+      "Code Execution": 2,
+      "SQL Injection": 1,
+      "XSS / Template Injection": 1,
+      "Command Injection": 2,
+      "ReDoS": 1,
+      "SSRF": 1
+    }
+  },
+  "reachability_summary": {
+    "Confirmed Reachable": 11,
+    "Reachability Eliminated": 0,
+    "Unverifiable": 0,
+    "Requires Manual Review": 1,
+    "Not Analysed": 18
+  },
+  "attack_paths": [],
+  "reachability": [],
+  "findings": [
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Hardcoded Secret",
+      "severity": "CRITICAL",
+      "line_number": 28,
+      "code_snippet": " 26   | \n 27   | # ============ VULNERABILITY 1: Hardcoded credentials ============\n 28 \u2192 | DB_PASSWORD = \"supe..._123\"\n 29   | API_KEY = \"sk_live_51abc123def456\"\n 30   | \n 31   | # ============ VULNERABILITY 2: Command injection with eval ============",
+      "description": "Hardcoded password detected: Password appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: supe..._123",
+      "confidence": 0.9,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "secret_type": "Password",
+        "masked_value": "supe..._123",
+        "pattern_matched": "[\"\\']?password[\"\\']?\\s*[=:]\\s*[\"\\']([^\"\\']{8,})[\"\\']",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "HardcodedSecretsDetector",
+      "vulnerability_type": "Hardcoded Secret",
+      "severity": "CRITICAL",
+      "line_number": 29,
+      "code_snippet": " 27   | # ============ VULNERABILITY 1: Hardcoded credentials ============\n 28   | DB_PASSWORD = \"super_secret_123\"\n 29 \u2192 | API_KEY = \"sk_l...f456\"\n 30   | \n 31   | # ============ VULNERABILITY 2: Command injection with eval ============\n 32   | @app.route('/execute', methods=['POST'])",
+      "description": "Hardcoded API key detected: API Key appears to be hardcoded. Hardcoded secrets can be extracted by attackers who gain access to source code, version control history, or compiled binaries. This can lead to unauthorized access, data breaches, and service compromise. Value: sk_l...f456",
+      "confidence": 0.9,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "metadata": {
+        "secret_type": "API Key",
+        "masked_value": "sk_l...f456",
+        "pattern_matched": "[\"\\']?api[_-]?key[\"\\']?\\s*[=:]\\s*[\"\\']([A-Za-z0-9_\\-]{20,})[\"\\']",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "WeakRandomDetector",
+      "vulnerability_type": "Weak Random",
+      "severity": "HIGH",
+      "line_number": 87,
+      "code_snippet": " 85   |     \"\"\"Predictable random token\"\"\"\n 86   |     # VULNERABLE: time-based seed\n 87 \u2192 |     random.seed(datetime.datetime.now().timestamp())\n 88   |     return ''.join(random.choices('0123456789', k=6))\n 89   | \n 90   | # ============ VULNERABILITY 9: XML External Entity ============",
+      "description": "Predictable random.seed(...) detected. Seed values derived from time/process data are guessable and make PRNG output predictable.",
+      "confidence": 0.93,
+      "cwe_id": "CWE-330",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "metadata": {
+        "weak_call": "random.seed",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "WeakHashDetector",
+      "vulnerability_type": "Weak Hash",
+      "severity": "HIGH",
+      "line_number": 81,
+      "code_snippet": " 79   |     \"\"\"Weak MD5 password hashing\"\"\"\n 80   |     # VULNERABLE: MD5 is broken\n 81 \u2192 |     return hashlib.md5(password.encode()).hexdigest()\n 82   | \n 83   | # ============ VULNERABILITY 8: Insecure random token ============\n 84   | def generate_token():",
+      "description": "Weak hashing algorithm 'md5' detected. Algorithms like MD5 and SHA-1 are cryptographically broken and vulnerable to collision attacks. Use SHA-256 or stronger for security-sensitive hashing.",
+      "confidence": 0.93,
+      "cwe_id": "CWE-328",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "metadata": {
+        "algorithm": "md5",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "XXEDetector",
+      "vulnerability_type": "XML External Entity (XXE)",
+      "severity": "HIGH",
+      "line_number": 94,
+      "code_snippet": " 91   | def parse_xml(xml_data):\n 92   |     \"\"\"XXE vulnerability\"\"\"\n 93   |     # CRITICAL: No XXE protection\n 94 \u2192 |     root = ET.fromstring(xml_data)\n 95   |     return root.tag\n 96   | \n 97   | # ============ VULNERABILITY 10: Shell injection with shell=True ============\n 98   | def list_directory(path):",
+      "description": "Stdlib XML parser used without defusedxml. Python's built-in XML parsers do not fully prevent XXE attacks. Replace with defusedxml equivalents.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-611",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "detection_type": "unsafe_xml_call",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "DeserializationDetector",
+      "vulnerability_type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "line_number": 75,
+      "code_snippet": " 72   | def load_user_data(data):\n 73   |     \"\"\"Pickle deserialization RCE\"\"\"\n 74   |     # CRITICAL: Untrusted pickle loading\n 75 \u2192 |     return pickle.loads(base64.b64decode(data))\n 76   | \n 77   | # ============ VULNERABILITY 7: Weak password hashing ============\n 78   | def hash_password(password):\n 79   |     \"\"\"Weak MD5 password hashing\"\"\"",
+      "description": "Unsafe deserialization via pickle.loads(): pickle deserialization allows arbitrary code execution. An attacker controlling the serialized payload can achieve remote code execution.",
+      "confidence": 0.92,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "sink": "pickle.loads",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from data (line 72) to pickle.loads (line 75) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "data",
+          "file": "Test3.py",
+          "line": 72,
+          "detail": "Parameter 'data' of function 'load_user_data' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "pickle.loads",
+          "file": "Test3.py",
+          "line": 75,
+          "detail": "Tainted data reaches pickle.loads()"
+        },
+        "vulnerability_type": "Unsafe Deserialization",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-502"
+      },
+      "sink_api": "pickle.loads",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "DeserializationDetector",
+      "vulnerability_type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "line_number": 109,
+      "code_snippet": "106   | def load_config(yaml_str):\n107   |     \"\"\"YAML deserialization RCE\"\"\"\n108   |     # CRITICAL: Unsafe YAML loading\n109 \u2192 |     return yaml.load(yaml_str, Loader=yaml.Loader)\n110   | \n111   | # ============ VULNERABILITY 12: ReDoS vulnerability ============\n112   | def validate_email(email):\n113   |     \"\"\"Exponential ReDoS regex\"\"\"",
+      "description": "Unsafe deserialization via yaml.load(): yaml.load can instantiate arbitrary Python objects. An attacker controlling the serialized payload can achieve remote code execution.",
+      "confidence": 0.92,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "sink": "yaml.load",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from yaml_str (line 106) to yaml.load (line 109) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "yaml_str",
+          "file": "Test3.py",
+          "line": 106,
+          "detail": "Parameter 'yaml_str' of function 'load_config' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "yaml.load",
+          "file": "Test3.py",
+          "line": 109,
+          "detail": "Tainted data reaches yaml.load()"
+        },
+        "vulnerability_type": "Unsafe Deserialization",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-502"
+      },
+      "sink_api": "yaml.load",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "DeserializationDetector",
+      "vulnerability_type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "line_number": 235,
+      "code_snippet": "232   |     \n233   |     # 3. Deserialization\n234   |     pickle_data = data.get('pickle', '')\n235 \u2192 |     pickle.loads(base64.b64decode(pickle_data))\n236   |     \n237   |     # 4. XSS\n238   |     name = data.get('name', '')\n239   |     return f\"<script>alert('Hello {name}')</script>\"",
+      "description": "Unsafe deserialization via pickle.loads(): pickle deserialization allows arbitrary code execution. An attacker controlling the serialized payload can achieve remote code execution.",
+      "confidence": 0.92,
+      "cwe_id": "CWE-502",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "sink": "pickle.loads",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "TOCTOUDetector",
+      "vulnerability_type": "Path Traversal",
+      "severity": "HIGH",
+      "line_number": 181,
+      "code_snippet": "177   | def write_to_file(filename, content):\n178   |     \"\"\"TOCTOU race condition\"\"\"\n179   |     if os.path.exists(filename):\n180   |         # CRITICAL: Race between check and write\n181 \u2192 |         with open(filename, 'w') as f:\n182   |             f.write(content)\n183   |         return True\n184   |     return False\n185   | \n186   | # ============ VULNERABILITY 21: Unsafe redirect ============",
+      "description": "Time-of-check to time-of-use (TOCTOU) race condition: file 'filename' is checked on line 179 then used on line 181. Between check and use, an attacker can replace the file with a symlink to a sensitive resource. Use atomic operations or open-then-check patterns.",
+      "confidence": 0.85,
+      "cwe_id": "CWE-22",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "check_line": 179,
+        "use_line": 181,
+        "file_var": "filename",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from filename (line 177) to open (line 181) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "filename",
+          "file": "Test3.py",
+          "line": 177,
+          "detail": "Parameter 'filename' of function 'write_to_file' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "open",
+          "file": "Test3.py",
+          "line": 181,
+          "detail": "Tainted data reaches open()"
+        },
+        "vulnerability_type": "Path Traversal",
+        "severity": "HIGH",
+        "cwe_id": "CWE-22"
+      },
+      "sink_api": "open",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "TypeConfusionDetector",
+      "vulnerability_type": "Mass Assignment",
+      "severity": "HIGH",
+      "line_number": 123,
+      "code_snippet": "119   | class User:\n120   |     def __init__(self, data):\n121   |         # CRITICAL: Mass assignment\n122   |         for key, value in data.items():\n123 \u2192 |             setattr(self, key, value)\n124   | \n125   | # ============ VULNERABILITY 14: Log injection ============\n126   | def log_action(username, action):\n127   |     \"\"\"Log injection vulnerability\"\"\"\n128   |     log_msg = f\"{datetime.datetime.now()} - {username} - {action}\\n\"",
+      "description": "setattr() called in a loop over dictionary items. An attacker can inject arbitrary attributes including 'is_admin', '__class__', or '__dict__' to escalate privileges or corrupt object state. Use an allowlist of permitted attribute names.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-915",
+      "owasp_category": "A08:2021 \u2013 Software and Data Integrity Failures",
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "XSSDetector",
+      "vulnerability_type": "Reflected XSS",
+      "severity": "HIGH",
+      "line_number": 192,
+      "code_snippet": "188   | def unsafe_redirect():\n189   |     \"\"\"Open redirect vulnerability\"\"\"\n190   |     url = request.args.get('url', '/')\n191   |     # CRITICAL: No validation of redirect URL\n192 \u2192 |     return f'<meta http-equiv=\"refresh\" content=\"0; url={url}\">'\n193   | \n194   | # ============ VULNERABILITY 22: Server-Side Request Forgery ============\n195   | import requests\n196   | \n197   | @app.route('/fetch')",
+      "description": "User-controlled variable 'url' is included in an HTML response without escaping. Use html.escape() or a template engine with auto-escaping.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-79",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "user_var": "url",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "XSSDetector",
+      "vulnerability_type": "Reflected XSS",
+      "severity": "HIGH",
+      "line_number": 239,
+      "code_snippet": "235   |     pickle.loads(base64.b64decode(pickle_data))\n236   |     \n237   |     # 4. XSS\n238   |     name = data.get('name', '')\n239 \u2192 |     return f\"<script>alert('Hello {name}')</script>\"\n240   | \n241   | if __name__ == '__main__':\n242   |     app.run(debug=True)  # CRITICAL: Debug mode in production",
+      "description": "User-controlled variable 'name' is included in an HTML response without escaping. Use html.escape() or a template engine with auto-escaping.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-79",
+      "owasp_category": "A03:2021 \u2013 Injection",
+      "metadata": {
+        "user_var": "name",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Unsafe File Upload",
+      "severity": "HIGH",
+      "line_number": 147,
+      "code_snippet": "144   |     filename = file.filename\n145   |     \n146   |     # CRITICAL: No validation, direct save\n147 \u2192 |     file.save(f\"/uploads/{filename}\")\n148   |     return \"File uploaded\"\n149   | \n150   | # ============ VULNERABILITY 17: Information disclosure ============\n151   | @app.route('/debug')",
+      "description": "Uploaded file is saved without robust filename/content validation. Use secure_filename(), extension allowlists, MIME checks, and size limits.",
+      "confidence": 0.9,
+      "cwe_id": "CWE-434",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "pattern": "file_save_without_validation",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Information Disclosure",
+      "severity": "MEDIUM",
+      "line_number": 156,
+      "code_snippet": "153   |     \"\"\"Information disclosure\"\"\"\n154   |     # CRITICAL: Debug info exposed\n155   |     return {\n156 \u2192 |         'python_version': sys.version,\n157   |         'cwd': os.getcwd(),\n158   |         'env_vars': dict(os.environ)\n159   |     }\n160   | ",
+      "description": "Sensitive runtime or system details are exposed to output. Avoid returning environment variables, version/build internals, or stack traces.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-200",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "sensitive_runtime_disclosure",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Information Disclosure",
+      "severity": "MEDIUM",
+      "line_number": 158,
+      "code_snippet": "155   |     return {\n156   |         'python_version': sys.version,\n157   |         'cwd': os.getcwd(),\n158 \u2192 |         'env_vars': dict(os.environ)\n159   |     }\n160   | \n161   | # ============ VULNERABILITY 18: Insecure direct object reference ============\n162   | @app.route('/profile/<user_id>')",
+      "description": "Sensitive runtime or system details are exposed to output. Avoid returning environment variables, version/build internals, or stack traces.",
+      "confidence": 0.88,
+      "cwe_id": "CWE-200",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "sensitive_runtime_disclosure",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Memory Exhaustion",
+      "severity": "HIGH",
+      "line_number": 209,
+      "code_snippet": "206   | def process_large_data(data_size):\n207   |     \"\"\"Memory exhaustion DoS\"\"\"\n208   |     # CRITICAL: No size limits\n209 \u2192 |     data = 'A' * int(data_size)\n210   |     return len(data)\n211   | \n212   | # ============ VULNERABILITY 24: Format string vulnerability ============\n213   | def log_with_format(username, action):",
+      "description": "User-influenced size is used for allocation without an upper bound. This can cause denial-of-service via memory exhaustion.",
+      "confidence": 0.91,
+      "cwe_id": "CWE-400",
+      "owasp_category": "A04:2021 \u2013 Insecure Design",
+      "metadata": {
+        "pattern": "unbounded_allocation",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Debug Mode Enabled",
+      "severity": "HIGH",
+      "line_number": 242,
+      "code_snippet": "239   |     return f\"<script>alert('Hello {name}')</script>\"\n240   | \n241   | if __name__ == '__main__':\n242 \u2192 |     app.run(debug=True)  # CRITICAL: Debug mode in production",
+      "description": "Application is started with debug=True. In production this can expose interactive debugger and sensitive internals.",
+      "confidence": 0.95,
+      "cwe_id": "CWE-489",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "runtime_debug_true",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Missing Security Headers",
+      "severity": "MEDIUM",
+      "line_number": 25,
+      "code_snippet": " 22   | import random\n 23   | import datetime\n 24   | \n 25 \u2192 | app = Flask(__name__)\n 26   | \n 27   | # ============ VULNERABILITY 1: Hardcoded credentials ============\n 28   | DB_PASSWORD = \"super_secret_123\"\n 29   | API_KEY = \"sk_live_51abc123def456\"",
+      "description": "Web application does not appear to set key security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options).",
+      "confidence": 0.82,
+      "cwe_id": "CWE-693",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "metadata": {
+        "pattern": "missing_security_headers",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Missing CSRF Protection",
+      "severity": "HIGH",
+      "line_number": 32,
+      "code_snippet": " 29   | API_KEY = \"sk_live_51abc123def456\"\n 30   | \n 31   | # ============ VULNERABILITY 2: Command injection with eval ============\n 32 \u2192 | @app.route('/execute', methods=['POST'])\n 33   | def execute_command():\n 34   |     \"\"\"Direct command execution via eval\"\"\"\n 35   |     cmd = request.form.get('command', '')\n 36   |     # CRITICAL: Direct eval of user input",
+      "description": "State-changing Flask endpoint is defined without visible CSRF protections.",
+      "confidence": 0.84,
+      "cwe_id": "CWE-352",
+      "owasp_category": "A01:2021 \u2013 Broken Access Control",
+      "metadata": {
+        "pattern": "missing_csrf",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Missing Rate Limiting",
+      "severity": "MEDIUM",
+      "line_number": 140,
+      "code_snippet": "137   |     return \"Code executed\"\n138   | \n139   | # ============ VULNERABILITY 16: Unsafe file upload ============\n140 \u2192 | @app.route('/upload', methods=['POST'])\n141   | def upload_file():\n142   |     \"\"\"Unsafe file upload\"\"\"\n143   |     file = request.files['file']\n144   |     filename = file.filename",
+      "description": "Potentially sensitive/high-risk endpoint has no visible rate limiting decorator.",
+      "confidence": 0.8,
+      "cwe_id": "CWE-770",
+      "owasp_category": "A04:2021 \u2013 Insecure Design",
+      "metadata": {
+        "pattern": "missing_rate_limit",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "OperationalSecurityDetector",
+      "vulnerability_type": "Missing Rate Limiting",
+      "severity": "MEDIUM",
+      "line_number": 162,
+      "code_snippet": "159   |     }\n160   | \n161   | # ============ VULNERABILITY 18: Insecure direct object reference ============\n162 \u2192 | @app.route('/profile/<user_id>')\n163   | def user_profile(user_id):\n164   |     \"\"\"Insecure direct object reference\"\"\"\n165   |     # CRITICAL: No authorization check\n166   |     return f\"Profile page for user {user_id}\"",
+      "description": "Potentially sensitive/high-risk endpoint has no visible rate limiting decorator.",
+      "confidence": 0.8,
+      "cwe_id": "CWE-770",
+      "owasp_category": "A04:2021 \u2013 Insecure Design",
+      "metadata": {
+        "pattern": "missing_rate_limit",
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Code Execution",
+      "severity": "CRITICAL",
+      "line_number": 37,
+      "code_snippet": "",
+      "description": "Tainted data reaches eval()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-95",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from request.form.get (line 35) to eval (line 37) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "request.form.get",
+          "file": "Test3.py",
+          "line": 35,
+          "detail": "HTTP form parameter"
+        },
+        "transforms": [
+          {
+            "name": "cmd",
+            "file": "Test3.py",
+            "line": 35,
+            "detail": "Variable 'cmd' receives tainted data"
+          },
+          {
+            "name": "f-string",
+            "file": "Test3.py",
+            "line": 37,
+            "detail": "Tainted value interpolated into f-string"
+          }
+        ],
+        "sink": {
+          "name": "eval",
+          "file": "Test3.py",
+          "line": 37,
+          "detail": "Tainted data reaches eval()"
+        },
+        "vulnerability_type": "Code Execution",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-95"
+      },
+      "sink_api": "eval",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "SQL Injection",
+      "severity": "CRITICAL",
+      "line_number": 48,
+      "code_snippet": "",
+      "description": "Tainted data reaches cursor.execute()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-89",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from user_id (line 41) to cursor.execute (line 48) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "user_id",
+          "file": "Test3.py",
+          "line": 41,
+          "detail": "Parameter 'user_id' of function 'get_user_data' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "f-string",
+            "file": "Test3.py",
+            "line": 47,
+            "detail": "Tainted value interpolated into f-string"
+          },
+          {
+            "name": "query",
+            "file": "Test3.py",
+            "line": 47,
+            "detail": "Variable 'query' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "cursor.execute",
+          "file": "Test3.py",
+          "line": 48,
+          "detail": "Tainted data reaches cursor.execute()"
+        },
+        "vulnerability_type": "SQL Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-89"
+      },
+      "sink_api": "cursor.execute",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Path Traversal",
+      "severity": "HIGH",
+      "line_number": 58,
+      "code_snippet": "",
+      "description": "Tainted data reaches open()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-22",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from request.args.get (line 55) to open (line 58) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "request.args.get",
+          "file": "Test3.py",
+          "line": 55,
+          "detail": "HTTP query parameter"
+        },
+        "transforms": [
+          {
+            "name": "filename",
+            "file": "Test3.py",
+            "line": 55,
+            "detail": "Variable 'filename' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "open",
+          "file": "Test3.py",
+          "line": 58,
+          "detail": "Tainted data reaches open()"
+        },
+        "vulnerability_type": "Path Traversal",
+        "severity": "HIGH",
+        "cwe_id": "CWE-22"
+      },
+      "sink_api": "open",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "XSS / Template Injection",
+      "severity": "CRITICAL",
+      "line_number": 69,
+      "code_snippet": "",
+      "description": "Tainted data reaches render_template_string()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-79",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from request.args.get (line 65) to render_template_string (line 69) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "request.args.get",
+          "file": "Test3.py",
+          "line": 65,
+          "detail": "HTTP query parameter"
+        },
+        "transforms": [
+          {
+            "name": "name",
+            "file": "Test3.py",
+            "line": 65,
+            "detail": "Variable 'name' receives tainted data"
+          },
+          {
+            "name": "f-string",
+            "file": "Test3.py",
+            "line": 68,
+            "detail": "Tainted value interpolated into f-string"
+          },
+          {
+            "name": "template",
+            "file": "Test3.py",
+            "line": 68,
+            "detail": "Variable 'template' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "render_template_string",
+          "file": "Test3.py",
+          "line": 69,
+          "detail": "Tainted data reaches render_template_string()"
+        },
+        "vulnerability_type": "XSS / Template Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-79"
+      },
+      "sink_api": "render_template_string",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Command Injection",
+      "severity": "CRITICAL",
+      "line_number": 102,
+      "code_snippet": "",
+      "description": "Tainted data reaches subprocess.check_output()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-78",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from path (line 98) to subprocess.check_output (line 102) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "path",
+          "file": "Test3.py",
+          "line": 98,
+          "detail": "Parameter 'path' of function 'list_directory' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "f-string",
+            "file": "Test3.py",
+            "line": 101,
+            "detail": "Tainted value interpolated into f-string"
+          },
+          {
+            "name": "cmd",
+            "file": "Test3.py",
+            "line": 101,
+            "detail": "Variable 'cmd' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "subprocess.check_output",
+          "file": "Test3.py",
+          "line": 102,
+          "detail": "Tainted data reaches subprocess.check_output()"
+        },
+        "vulnerability_type": "Command Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-78"
+      },
+      "sink_api": "subprocess.check_output",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Command Injection",
+      "severity": "CRITICAL",
+      "line_number": 226,
+      "code_snippet": "",
+      "description": "Tainted data reaches os.system()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-78",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Requires Manual Review",
+      "reachability_reasoning": "Path from source (line 98) to sink (line 226) depends on runtime configuration or environment variables. Static analysis cannot determine whether the path is exercised at runtime.",
+      "attack_path": {
+        "source": {
+          "name": "path",
+          "file": "Test3.py",
+          "line": 98,
+          "detail": "Parameter 'path' of function 'list_directory' (treated as untrusted input)"
+        },
+        "transforms": [
+          {
+            "name": "f-string",
+            "file": "Test3.py",
+            "line": 101,
+            "detail": "Tainted value interpolated into f-string"
+          },
+          {
+            "name": "cmd",
+            "file": "Test3.py",
+            "line": 101,
+            "detail": "Variable 'cmd' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "os.system",
+          "file": "Test3.py",
+          "line": 226,
+          "detail": "Tainted data reaches os.system()"
+        },
+        "vulnerability_type": "Command Injection",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-78"
+      },
+      "sink_api": "os.system",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "ReDoS",
+      "severity": "HIGH",
+      "line_number": 116,
+      "code_snippet": "",
+      "description": "Tainted data reaches re.match()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-1333",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from email (line 112) to re.match (line 116) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "email",
+          "file": "Test3.py",
+          "line": 112,
+          "detail": "Parameter 'email' of function 'validate_email' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "re.match",
+          "file": "Test3.py",
+          "line": 116,
+          "detail": "Tainted data reaches re.match()"
+        },
+        "vulnerability_type": "ReDoS",
+        "severity": "HIGH",
+        "cwe_id": "CWE-1333"
+      },
+      "sink_api": "re.match",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "Code Execution",
+      "severity": "CRITICAL",
+      "line_number": 136,
+      "code_snippet": "",
+      "description": "Tainted data reaches exec()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-95",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from code_str (line 133) to exec (line 136) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "code_str",
+          "file": "Test3.py",
+          "line": 133,
+          "detail": "Parameter 'code_str' of function 'dynamic_code_exec' (treated as untrusted input)"
+        },
+        "transforms": [],
+        "sink": {
+          "name": "exec",
+          "file": "Test3.py",
+          "line": 136,
+          "detail": "Tainted data reaches exec()"
+        },
+        "vulnerability_type": "Code Execution",
+        "severity": "CRITICAL",
+        "cwe_id": "CWE-95"
+      },
+      "sink_api": "exec",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    },
+    {
+      "detector_name": "StaticAnalysisPipeline",
+      "vulnerability_type": "SSRF",
+      "severity": "HIGH",
+      "line_number": 202,
+      "code_snippet": "",
+      "description": "Tainted data reaches requests.get()",
+      "confidence": 0.9,
+      "cwe_id": "CWE-918",
+      "owasp_category": null,
+      "metadata": {
+        "llm_analysis": {
+          "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+          "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface.",
+          "source": "None"
+        }
+      },
+      "reachability_status": "Confirmed Reachable",
+      "reachability_reasoning": "Tainted data flows from request.args.get (line 200) to requests.get (line 202) with no sanitiser detected. The path is considered reachable.",
+      "attack_path": {
+        "source": {
+          "name": "request.args.get",
+          "file": "Test3.py",
+          "line": 200,
+          "detail": "HTTP query parameter"
+        },
+        "transforms": [
+          {
+            "name": "url",
+            "file": "Test3.py",
+            "line": 200,
+            "detail": "Variable 'url' receives tainted data"
+          }
+        ],
+        "sink": {
+          "name": "requests.get",
+          "file": "Test3.py",
+          "line": 202,
+          "detail": "Tainted data reaches requests.get()"
+        },
+        "vulnerability_type": "SSRF",
+        "severity": "HIGH",
+        "cwe_id": "CWE-918"
+      },
+      "sink_api": "requests.get",
+      "risk_explanation": "LLM analysis not available. Please upload security policies to the Knowledge Base to enable AI-powered analysis.",
+      "suggested_fix": "Upload relevant security policies (PDF, MD, TXT) to the Knowledge Base via the web interface."
+    }
+  ]
+}
