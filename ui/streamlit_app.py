@@ -18,7 +18,7 @@ from src.ingestion import CodeIngestion
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Code Breaker",
+    page_title="DLLM CheckMate",
     page_icon="🔒",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -94,8 +94,8 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>🔒 AI Code Breaker</h1>
-        <h3>LLM Security Scanner for AI Systems</h3>
+        <h1>DLLM CheckMate</h1>
+        <h3>Security Analytics</h3>
         <p>Upload your code and discover security vulnerabilities before attackers do</p>
     </div>
     """, unsafe_allow_html=True)
@@ -360,12 +360,12 @@ def main():
                                 st.error(f"Could not load {format_type} report: {e}")
     
     with tab3:
-        st.header("About AI Code Breaker")
+        st.header("About DLLM CheckMate")
         
         st.markdown("""
         ### 🎯 Mission
         
-        **AI Code Breaker** helps developers identify and fix security vulnerabilities in 
+        **DLLM CheckMate** helps developers identify and fix security vulnerabilities in 
         AI-powered systems before attackers can exploit them.
         
         ### 🔍 What We Detect

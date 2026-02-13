@@ -1,0 +1,119 @@
+======================================================================
+SCANNER SUGGESTED FIXES FOR Test3.py
+======================================================================
+
+Total: 18 remediation items
+  - Functional (auto-applied): 10
+  - Guidance only:             8
+
+--- FUNCTIONAL FIXES (applied to remediated code) ---
+  L109 [Unsafe Deserialization]
+    Original:     return yaml.load(yaml_str, Loader=yaml.Loader)
+    Fixed:        return yaml.safe_load(yaml_str)
+    -> Replaced unsafe yaml.load() with yaml.safe_load()
+
+  L102 [Command Injection]
+    Original:     result = subprocess.check_output(cmd, shell=True)
+    Fixed:        result = subprocess.check_output(shlex.split(str(cmd)), shell=False)
+    -> Disabled shell execution and tokenized command arguments
+
+  L48 [SQL Injection]
+    Original:     cursor.execute(query)
+    Fixed:        cursor.execute(query, (user_id,))
+    -> Pass parameters to execute(): (user_id,)
+
+  L47 [SQL Injection]
+    Original:     query = f"SELECT * FROM users WHERE id = '{user_id}'"
+    Fixed:        query = "SELECT * FROM users WHERE id = ?"
+    -> Replaced f-string SQL with parameterized placeholder (pass (user_id,) to execute)
+
+  L242 [Debug Mode Enabled]
+    Original:     app.run(debug=True)  # CRITICAL: Debug mode in production
+    Fixed:        app.run(debug=False)  # CRITICAL: Debug mode in production
+    -> Disabled debug mode for production
+
+  L226 [Command Injection]
+    Original:     os.system(cmd)
+    Fixed:        parts = shlex.split(str(cmd))
+    subprocess.run(parts, shell=False)
+    -> Replaced shell string execution with tokenized subprocess.run(parts, shell=False)
+
+  L88 [Weak Random]
+    Original:     return ''.join(random.choices('0123456789', k=6))
+    Fixed:        return secrets.token_hex(3)
+    -> Replaced weak random.choices() with secrets.token_hex(3)
+
+  L81 [Weak Hash]
+    Original:     return hashlib.md5(password.encode()).hexdigest()
+    Fixed:        return hashlib.sha256(password.encode()).hexdigest()
+    -> Replaced MD5 with SHA-256 for cryptographic hashing
+
+  L29 [Hardcoded Secret]
+    Original: API_KEY = "sk_live_51abc123def456"
+    Fixed:    API_KEY = os.environ.get("API_KEY", "")
+    -> Replaced hardcoded value with os.environ.get("API_KEY")
+
+  L28 [Hardcoded Secret]
+    Original: DB_PASSWORD = "super_secret_123"
+    Fixed:    DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+    -> Replaced hardcoded value with os.environ.get("DB_PASSWORD")
+
+--- GUIDANCE ONLY (no auto-fix applied) ---
+  L202 [SSRF]
+    Line:     response = requests.get(url)
+    -> Validate URLs against an allowlist of permitted hosts/schemes. Block private/internal IP ranges (127...
+
+  L181 [Path Traversal]
+    Line:         with open(filename, 'w') as f:
+    -> Resolve the path with os.path.realpath() then verify it starts with the allowed base directory using...
+
+  L136 [Code Execution]
+    Line:     exec(code_str)
+    -> Eliminate exec() entirely. Map user actions to named handler functions via a dispatch dict instead o...
+
+  L116 [ReDoS]
+    Line:     return bool(re.match(pattern, email))
+    -> Simplify the regex to avoid nested quantifiers. Use re2 or set a timeout with regex.match(pattern, s...
+
+  L75 [Unsafe Deserialization]
+    Line:     return pickle.loads(base64.b64decode(data))
+    -> Replace pickle.loads() with json.loads() or a schema-validated deserializer. If pickle is required, ...
+
+  L69 [XSS / Template Injection]
+    Line:     return render_template_string(template)
+    -> Use html.escape() on all user-controlled values before inserting into HTML. Prefer render_template()...
+
+  L58 [Path Traversal]
+    Line:     with open(filename, 'r') as f:
+    -> Resolve the path with os.path.realpath() then verify it starts with the allowed base directory using...
+
+  L37 [Code Execution]
+    Line:     result = eval(f"os.system('{cmd}')")
+    -> Replace eval() with ast.literal_eval() for data parsing, or use a safe expression evaluator (e.g. si...
+
+======================================================================
+COMPARISON WITH Test3_remediated_secure.py
+======================================================================
+  - Code Execution: 0 fixed, 2 guidance
+  - Command Injection: 2 fixed, 0 guidance
+  - Debug Mode Enabled: 1 fixed, 0 guidance
+  - Hardcoded Secret: 2 fixed, 0 guidance
+  - Path Traversal: 0 fixed, 2 guidance
+  - ReDoS: 0 fixed, 1 guidance
+  - SQL Injection: 2 fixed, 0 guidance
+  - SSRF: 0 fixed, 1 guidance
+  - Unsafe Deserialization: 1 fixed, 1 guidance
+  - Weak Hash: 1 fixed, 0 guidance
+  - Weak Random: 1 fixed, 0 guidance
+  - XSS / Template Injection: 0 fixed, 1 guidance
+
+ALIGNMENT SUMMARY:
+  - Scanner applied 10 functional fixes; Test3_remediated_secure.py implements
+    the same (parameterized SQL, yaml.safe_load, secrets, SHA-256, env secrets,
+    debug=False, command injection via shlex/subprocess).
+  - Scanner gave 8 guidance-only items (SSRF, path traversal, exec, eval,
+    ReDoS, pickle, XSS). Remediated file addresses all: allowlists, path
+    containment, removal of exec/eval/pickle, safe regex + length limit,
+    auto-escaped templates.
+  -> Scanner suggested fixes align with almost all remediations in
+     Test3_remediated_secure.py (and the remediated file is stricter in places).

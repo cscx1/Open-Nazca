@@ -158,6 +158,12 @@ class HardcodedSecretsDetector(BaseDetector):
                     # Extract the secret value (if captured in group)
                     secret_value = match.group(1) if match.groups() else match.group()
                     
+                    # Skip false positives: template / f-string variable
+                    # references like {password}, {username}, {api_key}.
+                    # These are interpolation placeholders, not real secrets.
+                    if re.fullmatch(r'\{[\w.]+\}', secret_value.strip()):
+                        continue
+                    
                     # Mask the secret for display (show first/last 4 chars)
                     masked_secret = self._mask_secret(secret_value)
                     
@@ -474,10 +480,21 @@ class HardcodedSecretsDetector(BaseDetector):
                 function_name = func_match.group(1)
                 params = func_match.group(2).lower()
                 
-                # Count sensitive parameters
-                secret_params_count = sum(1 for kw in sensitive_keywords if kw in params)
-                
-                if secret_params_count >= 2 or 'sensitive' in function_name.lower() or \
+                # Count sensitive parameters — each keyword must match a
+                # DISTINCT parameter name, not just appear as a substring
+                # of the full params string.
+                param_names = [p.strip().split(':')[0].split('=')[0].strip()
+                               for p in params.split(',')]
+                secret_params_count = 0
+                matched_params: set = set()
+                for pname in param_names:
+                    for kw in sensitive_keywords:
+                        if kw in pname and pname not in matched_params:
+                            secret_params_count += 1
+                            matched_params.add(pname)
+                            break
+
+                if secret_params_count >= 3 or 'sensitive' in function_name.lower() or \
                    'collect' in function_name.lower() or 'stash' in function_name.lower():
                     in_function = True
                     function_start = line_num
@@ -493,7 +510,7 @@ class HardcodedSecretsDetector(BaseDetector):
                 if line_num > function_start and (line.startswith('def ') or 
                     (stripped and not line.startswith(' ') and not line.startswith('\t'))):
                     
-                    if secret_operations >= 2 or secret_params_count >= 2:
+                    if secret_operations >= 3 or secret_params_count >= 3:
                         snippet = self.extract_code_snippet(code, function_start, context_lines=5)
                         
                         finding = Finding(

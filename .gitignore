@@ -41,3 +41,8 @@ Thumbs.db
 uploads/
 temp/
 
+# Optional benchmark / test data (large; clone separately if needed)
+BenchmarkPython/
+semgrep-tests/
+dvpwa/
+

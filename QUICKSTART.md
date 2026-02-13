@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python cli.py scan examples/vulnerable_code/example1_prompt_injection.py --no-llm
 
 # 3. Launch web UI
-streamlit run ui/streamlit_app.py
+streamlit run app.py
 ```
 
 ✅ **You're done!** The scanner works without Snowflake or LLM APIs.
@@ -50,7 +50,7 @@ SNOWFLAKE_WAREHOUSE=COMPUTE_WH
 python cli.py scan examples/vulnerable_code/example1_prompt_injection.py --snowflake
 
 # Or use the web UI
-streamlit run ui/streamlit_app.py
+streamlit run app.py
 ```
 
 ## 🎬 Demo Flow for Presentations
@@ -73,7 +73,7 @@ Or use the web UI for a visual demo:
 
 ```bash
 # 1. Launch UI
-streamlit run ui/streamlit_app.py
+streamlit run app.py
 
 # 2. Upload example file from examples/vulnerable_code/
 
@@ -131,7 +131,7 @@ python cli.py scan myfile.py --no-llm
 ### "Port already in use" (Streamlit)
 ```bash
 # Use a different port
-streamlit run ui/streamlit_app.py --server.port 8502
+streamlit run app.py --server.port 8502
 ```
 
 ## 🎯 Next Steps

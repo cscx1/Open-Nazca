@@ -86,14 +86,14 @@ python -c "from src.snowflake_integration import SnowflakeClient; SnowflakeClien
 ### Option 1: Web UI (Recommended)
 
 ```bash
-# Launch Streamlit interface
-streamlit run ui/streamlit_app.py
+# Launch main app (KnightCheck Security Analytics)
+streamlit run app.py
 
 # Or use the CLI
 python cli.py ui
 ```
 
-Then open http://localhost:8501 in your browser and upload code files to scan.
+Then open http://localhost:8501 in your browser. For a minimal upload-and-scan UI use `streamlit run app.py`.
 
 ### Option 2: Command Line
 
@@ -155,8 +155,14 @@ LLMCheck/
 │   ├── snowflake_integration/  # Snowflake data persistence
 │   ├── report_generation/  # Report creation (JSON/HTML/MD)
 │   └── scanner.py          # Main orchestrator
+├── app.py                  # Main Streamlit app (KnightCheck Security Analytics)
 ├── ui/
-│   └── streamlit_app.py    # Web interface
+│   └── streamlit_app.py    # Alternate minimal upload-and-scan UI
+├── scripts/                # Validation & benchmarking (run from repo root)
+│   ├── benchmark_test.py
+│   ├── validate_detectors.py
+│   ├── validate_test3_regressions.py
+│   └── run_test3_remediation_check.py
 ├── config/
 │   ├── snowflake_schema.sql  # Database schema
 │   └── config.yaml         # Configuration settings
@@ -301,7 +307,7 @@ For a quick demo:
 
 ```bash
 # 1. Launch the web UI
-streamlit run ui/streamlit_app.py
+streamlit run app.py
 
 # 2. Upload an example file from examples/vulnerable_code/
 
@@ -311,6 +317,15 @@ streamlit run ui/streamlit_app.py
 
 # 5. View detailed findings with explanations and fixes!
 ```
+
+## Validation & benchmarking
+
+See **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** for layout and optional data (BenchmarkPython, bandit-tests). From repo root:
+
+- `python scripts/benchmark_test.py` — OWASP Benchmark accuracy (requires BenchmarkPython)
+- `python scripts/validate_detectors.py` — detector checks vs Bandit examples
+- `python scripts/validate_test3_regressions.py` — regression tests for Test3 fixes
+- `python scripts/run_test3_remediation_check.py` — compare scanner fixes to Test3_remediated_secure.py
 
 ## 🚧 Future Enhancements
 

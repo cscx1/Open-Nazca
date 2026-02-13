@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 class Finding:
     """
     Represents a single security vulnerability finding.
+
+    Trust-gradient fields (populated by the analysis pipeline):
+      - reachability_status: one of
+            "Confirmed Reachable", "Reachability Eliminated",
+            "Unverifiable", "Requires Manual Review"
+      - reachability_reasoning: human-readable explanation
+      - attack_path:  serialised Source → Transform → Sink chain
+      - sink_api:     the library API actually reached (for library-accurate classification)
     """
     detector_name: str
     vulnerability_type: str
@@ -26,10 +34,15 @@ class Finding:
     cwe_id: Optional[str] = None
     owasp_category: Optional[str] = None
     metadata: Optional[Dict] = None
+    # ── trust-gradient fields ─────────────────────────────────
+    reachability_status: Optional[str] = None
+    reachability_reasoning: Optional[str] = None
+    attack_path: Optional[Dict] = None
+    sink_api: Optional[str] = None
     
     def to_dict(self) -> Dict:
         """Convert finding to dictionary for storage."""
-        return {
+        d = {
             'detector_name': self.detector_name,
             'vulnerability_type': self.vulnerability_type,
             'severity': self.severity,
@@ -39,8 +52,18 @@ class Finding:
             'confidence': self.confidence,
             'cwe_id': self.cwe_id,
             'owasp_category': self.owasp_category,
-            'metadata': self.metadata or {}
+            'metadata': self.metadata or {},
         }
+        # Include trust-gradient fields when populated
+        if self.reachability_status is not None:
+            d['reachability_status'] = self.reachability_status
+        if self.reachability_reasoning is not None:
+            d['reachability_reasoning'] = self.reachability_reasoning
+        if self.attack_path is not None:
+            d['attack_path'] = self.attack_path
+        if self.sink_api is not None:
+            d['sink_api'] = self.sink_api
+        return d
 
 
 class BaseDetector(ABC):

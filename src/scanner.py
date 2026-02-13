@@ -1,6 +1,13 @@
 """
-Main Scanner Orchestrator for AI Code Breaker
+Main Scanner Orchestrator for KnightCheck
 Coordinates the complete security scanning workflow.
+
+Pipeline:
+  1. Code ingestion
+  2. Pattern-based vulnerability detection
+  3. AST-based taint analysis  →  attack-path graph  →  reachability verification
+  4. LLM analysis (optional enrichment)
+  5. Report generation with trust-gradient classification
 """
 
 import time
@@ -9,18 +16,42 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 
 # Import all modules
-# Import all modules
 from .ingestion import CodeIngestion
 from .detectors import (
     PromptInjectionDetector,
     HardcodedSecretsDetector,
     OverprivilegedToolsDetector,
-    Finding
+    WeakRandomDetector,
+    WeakHashDetector,
+    XPathInjectionDetector,
+    XXEDetector,
+    DeserializationDetector,
+    SecureCookieDetector,
+    TrustBoundaryDetector,
+    LDAPInjectionDetector,
+    SQLInjectionDetector,
+    UnsafeReflectionDetector,
+    CryptoMisuseDetector,
+    TOCTOUDetector,
+    MemorySafetyDetector,
+    TypeConfusionDetector,
+    LogInjectionDetector,
+    XSSDetector,
+    EvasionPatternsDetector,
+    OperationalSecurityDetector,
+    Finding,
 )
+from .detectors.vuln_ownership import is_owner
 from .llm_reasoning import LLMAnalyzer
 from .snowflake_integration import SnowflakeClient
 from .report_generation import ReportGenerator
 from .rag_manager import RAGManager
+
+# Analysis pipeline
+from .analysis.taint_tracker import TaintTracker
+from .analysis.attack_graph import AttackGraph
+from .analysis.sink_classifier import SinkClassifier
+from .analysis.reachability import ReachabilityVerifier, ReachabilityStatus
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +74,7 @@ class AICodeScanner:
         max_file_size_mb: int = 10
     ):
         """
-        Initialize the AI Code Scanner.
+        Initialize the KnightCheck Scanner.
         
         Args:
             use_snowflake: Whether to store results in Snowflake
@@ -53,7 +84,7 @@ class AICodeScanner:
         """
         self.use_snowflake = use_snowflake
         self.use_llm_analysis = use_llm_analysis
-        logger.info("Initializing AI Code Scanner...")
+        logger.info("Initializing KnightCheck Scanner...")
         
         self.ingestion = CodeIngestion(max_file_size_mb=max_file_size_mb)
         logger.info("✓ Code ingestion module loaded")
@@ -70,7 +101,25 @@ class AICodeScanner:
         self.detectors = [
             PromptInjectionDetector(enabled=True),
             HardcodedSecretsDetector(enabled=True),
-            OverprivilegedToolsDetector(enabled=True)
+            OverprivilegedToolsDetector(enabled=True),
+            WeakRandomDetector(enabled=True),
+            WeakHashDetector(enabled=True),
+            SQLInjectionDetector(enabled=True),
+            XPathInjectionDetector(enabled=True),
+            XXEDetector(enabled=True),
+            DeserializationDetector(enabled=True),
+            SecureCookieDetector(enabled=True),
+            TrustBoundaryDetector(enabled=True),
+            LDAPInjectionDetector(enabled=True),
+            UnsafeReflectionDetector(enabled=True),
+            CryptoMisuseDetector(enabled=True),
+            TOCTOUDetector(enabled=True),
+            MemorySafetyDetector(enabled=True),
+            TypeConfusionDetector(enabled=True),
+            LogInjectionDetector(enabled=True),
+            XSSDetector(enabled=True),
+            EvasionPatternsDetector(enabled=True),
+            OperationalSecurityDetector(enabled=True),
         ]
         logger.info(f"✓ Loaded {len(self.detectors)} vulnerability detectors")
         
@@ -96,11 +145,16 @@ class AICodeScanner:
                 logger.warning(f"Snowflake not available: {e}. Results won't be persisted.")
                 self.use_snowflake = False
         
+        # Initialize analysis pipeline
+        self.taint_tracker = TaintTracker()
+        self.reachability_verifier = ReachabilityVerifier()
+        logger.info("✓ Analysis pipeline loaded (taint tracker + reachability verifier)")
+
         # Initialize report generator
         self.report_generator = ReportGenerator()
         logger.info("✓ Report generator loaded")
         
-        logger.info("🚀 AI Code Scanner ready!")
+        logger.info("🚀 KnightCheck Scanner ready!")
     
     def scan_file(
         self,
@@ -172,6 +226,53 @@ class AICodeScanner:
             all_findings = self._deduplicate_findings(all_findings)
             
             logger.info(f"✓ Detection complete: {len(all_findings)} total vulnerabilities found")
+            
+            # Step 3.5: AST-based taint analysis + attack-path graph + reachability
+            logger.info("\n[3.5/5] Running static analysis pipeline...")
+            attack_paths_data = []
+            reachability_data = []
+            try:
+                if file_data['language'] == 'python':
+                    nodes, edges = self.taint_tracker.analyse(
+                        file_data['file_name'], file_data['code_content']
+                    )
+                    if nodes:
+                        graph = AttackGraph()
+                        graph.add_nodes_and_edges(nodes, edges)
+                        attack_paths = graph.enumerate_attack_paths()
+                        logger.info(f"  ✓ Built attack graph: {graph.node_count} nodes, "
+                                    f"{graph.edge_count} edges, {len(attack_paths)} paths")
+                        
+                        # Verify reachability
+                        reach_results = self.reachability_verifier.verify_paths(
+                            attack_paths, file_data['code_content'], file_data['file_name']
+                        )
+                        
+                        # Enrich findings with trust-gradient classification
+                        all_findings = self._enrich_findings_with_analysis(
+                            all_findings, reach_results
+                        )
+                        # Re-run dedupe because enrichment can add AST-only findings
+                        # that overlap pattern findings on the same sink line.
+                        all_findings = self._deduplicate_findings(all_findings)
+                        
+                        attack_paths_data = [p.to_dict() for p in attack_paths]
+                        reachability_data = [r.to_dict() for r in reach_results]
+                        
+                        # Log reachability summary
+                        status_counts: Dict[str, int] = {}
+                        for r in reach_results:
+                            s = r.status.value
+                            status_counts[s] = status_counts.get(s, 0) + 1
+                        for status, count in status_counts.items():
+                            logger.info(f"    {status}: {count}")
+                    else:
+                        logger.info("  No taint nodes found — skipping graph construction")
+                else:
+                    logger.info(f"  AST analysis not yet supported for {file_data['language']} "
+                                f"— using pattern-based results only")
+            except Exception as e:
+                logger.warning(f"  ⚠ Analysis pipeline error: {e}")
             
             # Step 4: LLM Analysis (if enabled)
             if self.use_llm_analysis and all_findings:
@@ -332,7 +433,9 @@ class AICodeScanner:
                 'severity_counts': severity_counts,
                 'scan_duration_ms': scan_duration_ms,
                 'findings': findings_dicts,
-                'report_paths': report_paths
+                'report_paths': report_paths,
+                'attack_paths': attack_paths_data,
+                'reachability': reachability_data,
             }
             
             logger.info(f"\n✅ Scan complete! Duration: {scan_duration_ms}ms")
@@ -348,37 +451,161 @@ class AICodeScanner:
                 'file_name': file_path
             }
     
+    def _enrich_findings_with_analysis(
+        self,
+        findings: List[Finding],
+        reach_results: List,
+    ) -> List[Finding]:
+        """
+        Annotate pattern-based findings with trust-gradient classification
+        derived from the AST analysis pipeline.
+
+        Matching strategy (in priority order):
+        1. Exact match: sink line + vulnerability type
+        2. Sink line match (any type)
+        3. Transform line match: pattern detectors often flag the line where
+           tainted data is concatenated (a transform), not the sink API call.
+           We search the attack path's transform nodes for a matching line.
+        4. Source line match: some pattern detectors flag the source line.
+        5. No match: create a new finding from the AST analysis.
+        """
+        from .analysis.reachability import ReachabilityResult
+
+        # Build lookup: line → list of findings on that line
+        line_to_findings: Dict[int, List[Finding]] = {}
+        for f in findings:
+            line_to_findings.setdefault(f.line_number, []).append(f)
+
+        # Track which findings have already been enriched
+        enriched: set = set()
+
+        for rr in reach_results:
+            if not isinstance(rr, ReachabilityResult):
+                continue
+            path = rr.path
+            sink_line = path.sink.line
+            vuln_type = path.vulnerability_type.lower()
+
+            matched = None
+
+            # 1) Exact match on sink line + type
+            for f in line_to_findings.get(sink_line, []):
+                if f.vulnerability_type.lower() == vuln_type and id(f) not in enriched:
+                    matched = f
+                    break
+
+            # 2) Sink line, any type
+            if matched is None:
+                for f in line_to_findings.get(sink_line, []):
+                    if id(f) not in enriched:
+                        matched = f
+                        break
+
+            # 3) Transform line match
+            if matched is None:
+                for transform in path.transforms:
+                    for f in line_to_findings.get(transform.line, []):
+                        if id(f) not in enriched:
+                            matched = f
+                            break
+                    if matched:
+                        break
+
+            # 4) Source line match
+            if matched is None:
+                for f in line_to_findings.get(path.source.line, []):
+                    if id(f) not in enriched:
+                        matched = f
+                        break
+
+            if matched is not None:
+                # Enrich the existing finding
+                enriched.add(id(matched))
+                matched.reachability_status = rr.status.value
+                matched.reachability_reasoning = rr.reasoning
+                matched.attack_path = path.to_dict()
+                matched.sink_api = path.sink.name
+                # Upgrade classification if analysis gives more specific type
+                from .analysis.sink_classifier import SinkClassifier
+                sink_info = SinkClassifier.classify(path.sink.name)
+                if sink_info:
+                    matched.vulnerability_type = sink_info.vulnerability_type
+                    matched.severity = sink_info.severity
+                    matched.cwe_id = sink_info.cwe_id
+            else:
+                # Create a new finding from the AST analysis
+                from .analysis.sink_classifier import SinkClassifier
+                sink_info = SinkClassifier.classify(path.sink.name)
+                new_finding = Finding(
+                    detector_name="StaticAnalysisPipeline",
+                    vulnerability_type=path.vulnerability_type,
+                    severity=path.severity,
+                    line_number=sink_line,
+                    code_snippet="",
+                    description=path.sink.detail,
+                    confidence=0.9,
+                    cwe_id=path.cwe_id or None,
+                    reachability_status=rr.status.value,
+                    reachability_reasoning=rr.reasoning,
+                    attack_path=path.to_dict(),
+                    sink_api=path.sink.name,
+                )
+                findings.append(new_finding)
+
+        return findings
+
     def _deduplicate_findings(self, findings: List[Finding]) -> List[Finding]:
         """
         Remove duplicate findings on the same line for the same vulnerability type.
-        Keeps the finding with highest confidence.
-        
-        Args:
-            findings: List of all findings
-        
-        Returns:
-            Deduplicated list of findings
+        Prefers the finding from the canonical "owner" detector for that type,
+        then reachability strength, then confidence.
         """
-        # Key: (line_number, vulnerability_type)
-        # Value: Finding with highest confidence
+        alias_map = {
+            "attribute injection": "mass assignment",
+        }
         unique_findings: Dict[tuple, Finding] = {}
-        
+
         for finding in findings:
-            key = (finding.line_number, finding.vulnerability_type)
-            
+            normalized = alias_map.get(
+                finding.vulnerability_type.lower(), finding.vulnerability_type.lower()
+            )
+            key = (finding.line_number, normalized, finding.sink_api or "")
+
             if key not in unique_findings:
                 unique_findings[key] = finding
-            else:
-                # Keep the one with higher confidence
-                if finding.confidence > unique_findings[key].confidence:
-                    unique_findings[key] = finding
-        
+                continue
+
+            existing = unique_findings[key]
+            # Prefer owner: if one finding is from the canonical detector for this type, keep it.
+            existing_is_owner = is_owner(existing.detector_name, existing.vulnerability_type)
+            candidate_is_owner = is_owner(finding.detector_name, finding.vulnerability_type)
+            if candidate_is_owner and not existing_is_owner:
+                unique_findings[key] = finding
+                continue
+            if existing_is_owner and not candidate_is_owner:
+                continue
+            # Tie-break: reachability, then confidence.
+            existing_rank = self._reachability_rank(existing.reachability_status)
+            candidate_rank = self._reachability_rank(finding.reachability_status)
+            if candidate_rank > existing_rank:
+                unique_findings[key] = finding
+            elif candidate_rank == existing_rank and finding.confidence > existing.confidence:
+                unique_findings[key] = finding
+
         deduped = list(unique_findings.values())
-        
         if len(findings) != len(deduped):
             logger.info(f"  Deduplicated: {len(findings)} → {len(deduped)} findings")
-        
         return deduped
+
+    @staticmethod
+    def _reachability_rank(status: Optional[str]) -> int:
+        order = {
+            ReachabilityStatus.CONFIRMED_REACHABLE.value: 4,
+            ReachabilityStatus.REQUIRES_MANUAL_REVIEW.value: 3,
+            ReachabilityStatus.UNVERIFIABLE.value: 2,
+            ReachabilityStatus.REACHABILITY_ELIMINATED.value: 1,
+        }
+        return order.get(status or "", 0)
     
     def scan_directory(
         self,
@@ -451,7 +678,7 @@ if __name__ == "__main__":
     
     # Create scanner instance
     with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
-        print("AI Code Scanner initialized!")
+        print("KnightCheck Scanner initialized!")
         print("Ready to scan files. Example usage:")
         print("  results = scanner.scan_file('path/to/code.py')")
 
