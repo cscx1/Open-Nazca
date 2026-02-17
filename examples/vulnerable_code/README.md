@@ -2,7 +2,7 @@
 
 This directory contains intentionally vulnerable code examples for testing the AI Code Breaker scanner.
 
-## ⚠️ WARNING
+## WARNING
 
 **These files contain intentional security vulnerabilities for demonstration purposes only.**
 
