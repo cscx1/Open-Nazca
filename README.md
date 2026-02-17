@@ -9,8 +9,8 @@ You can run it from the command line, from a Streamlit web app (Open Nazca Secur
 **Requirements:** Python 3.8+
 
 ```bash
-git clone https://github.com/cscx1/LLMCheck.git
-cd LLMCheck
+git clone https://github.com/cscx1/Open-Nazca.git
+cd Open-Nazca
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with Snowflake credentials (and optional OpenAI/Anthropic keys)
