@@ -251,9 +251,9 @@ SNOWFLAKE_ROLE=LLMCHECK_ROLE
 
 - Snowflake Documentation: https://docs.snowflake.com/
 - Cortex Guide: https://docs.snowflake.com/en/user-guide/snowflake-cortex
-- Issues: Check project README.md for troubleshooting
+- Issues: Check project [README](../README.md) for troubleshooting
 
 ---
 
-**Need help?** Check the main README.md or QUICKSTART.md for more guidance!
+**Need help?** Check the main [README](../README.md) or [QUICKSTART](QUICKSTART.md) for more guidance!
 

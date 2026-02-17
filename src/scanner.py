@@ -1,5 +1,5 @@
 """
-Main Scanner Orchestrator for KnightCheck
+Main Scanner Orchestrator for Open Nazca
 Coordinates the complete security scanning workflow.
 
 Pipeline:
@@ -52,6 +52,7 @@ from .analysis.taint_tracker import TaintTracker
 from .analysis.attack_graph import AttackGraph
 from .analysis.sink_classifier import SinkClassifier
 from .analysis.reachability import ReachabilityVerifier, ReachabilityStatus
+from .verdict import VerdictEngine
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class AICodeScanner:
         max_file_size_mb: int = 10
     ):
         """
-        Initialize the KnightCheck Scanner.
+        Initialize the Open Nazca Scanner.
         
         Args:
             use_snowflake: Whether to store results in Snowflake
@@ -84,7 +85,7 @@ class AICodeScanner:
         """
         self.use_snowflake = use_snowflake
         self.use_llm_analysis = use_llm_analysis
-        logger.info("Initializing KnightCheck Scanner...")
+        logger.info("Initializing Open Nazca Scanner...")
         
         self.ingestion = CodeIngestion(max_file_size_mb=max_file_size_mb)
         logger.info("✓ Code ingestion module loaded")
@@ -154,7 +155,7 @@ class AICodeScanner:
         self.report_generator = ReportGenerator()
         logger.info("✓ Report generator loaded")
         
-        logger.info("🚀 KnightCheck Scanner ready!")
+        logger.info("🚀 Open Nazca Scanner ready!")
     
     def scan_file(
         self,
@@ -255,7 +256,7 @@ class AICodeScanner:
                         # Re-run dedupe because enrichment can add AST-only findings
                         # that overlap pattern findings on the same sink line.
                         all_findings = self._deduplicate_findings(all_findings)
-                        
+
                         attack_paths_data = [p.to_dict() for p in attack_paths]
                         reachability_data = [r.to_dict() for r in reach_results]
                         
@@ -273,13 +274,24 @@ class AICodeScanner:
                                 f"— using pattern-based results only")
             except Exception as e:
                 logger.warning(f"  ⚠ Analysis pipeline error: {e}")
-            
+
+            # Verdict layer: context-aware classification (reduces false positives)
+            project_root = str(Path(file_path).resolve().parent)
+            verdict_engine = VerdictEngine(project_root)
+            verdicted = verdict_engine.run(
+                all_findings,
+                file_data["file_path"],
+                file_data["code_content"],
+            )
+            logger.info(f"  ✓ Verdict layer: {len(verdicted)} findings classified")
+
             # Step 4: LLM Analysis (if enabled)
-            if self.use_llm_analysis and all_findings:
-                logger.info(f"\n[4/5] Running LLM analysis on {len(all_findings)} findings with 15 parallel workers...")
+            if self.use_llm_analysis and verdicted:
+                logger.info(f"\n[4/5] Running LLM analysis on {len(verdicted)} findings with 15 parallel workers...")
                 
-                # Use batch_analyze for parallel processing
-                analyzed_results = self.llm_analyzer.batch_analyze(all_findings, max_workers=15)
+                # Use batch_analyze for parallel processing (on underlying findings)
+                findings_for_llm = [fwv.finding for fwv in verdicted]
+                analyzed_results = self.llm_analyzer.batch_analyze(findings_for_llm, max_workers=15)
                 
                 # Store analysis in Snowflake and update findings
                 for i, (finding, analysis) in enumerate(analyzed_results, 1):
@@ -319,8 +331,9 @@ class AICodeScanner:
                 logger.info("\n[4/5] Skipping LLM analysis")
                 
                 # Still insert findings into Snowflake without LLM analysis
-                if self.use_snowflake and all_findings:
-                    for finding in all_findings:
+                if self.use_snowflake and verdicted:
+                    for fwv in verdicted:
+                        finding = fwv.finding
                         finding_dict = finding.to_dict()
                         self.snowflake_client.insert_finding(
                             scan_id=scan_id,
@@ -338,13 +351,13 @@ class AICodeScanner:
             
             # Calculate statistics
             scan_duration_ms = int((time.time() - start_time) * 1000)
-            severity_counts = self._count_by_severity(all_findings)
+            severity_counts = self._count_by_severity([fwv.finding for fwv in verdicted])
             
             # Update Snowflake with statistics
             if self.use_snowflake:
                 self.snowflake_client.update_scan_statistics(
                     scan_id=scan_id,
-                    total_findings=len(all_findings),
+                    total_findings=len(verdicted),
                     critical_count=severity_counts.get('CRITICAL', 0),
                     high_count=severity_counts.get('HIGH', 0),
                     medium_count=severity_counts.get('MEDIUM', 0),
@@ -364,22 +377,19 @@ class AICodeScanner:
                 'scan_duration_ms': scan_duration_ms
             }
             
-            # Convert findings to dictionaries for reports
+            # Convert findings to dictionaries for reports (include verdict)
             findings_dicts = []
-            for finding in all_findings:
-                finding_dict = finding.to_dict()
-                # Add LLM analysis if available
-                if finding.metadata:
-                    # Check for nested llm_analysis (from batch_analyze)
-                    if 'llm_analysis' in finding.metadata:
-                        analysis = finding.metadata['llm_analysis']
-                        finding_dict['risk_explanation'] = analysis.get('risk_explanation')
-                        finding_dict['suggested_fix'] = analysis.get('suggested_fix')
-                    # Fallback for direct keys
-                    elif 'risk_explanation' in finding.metadata:
-                        finding_dict['risk_explanation'] = finding.metadata['risk_explanation']
-                        finding_dict['suggested_fix'] = finding.metadata['suggested_fix']
-                        
+            for fwv in verdicted:
+                finding_dict = fwv.to_dict()
+                finding = fwv.finding
+                if getattr(finding, "metadata", None):
+                    if "llm_analysis" in finding.metadata:
+                        analysis = finding.metadata["llm_analysis"]
+                        finding_dict["risk_explanation"] = analysis.get("risk_explanation")
+                        finding_dict["suggested_fix"] = analysis.get("suggested_fix")
+                    elif "risk_explanation" in finding.metadata:
+                        finding_dict["risk_explanation"] = finding.metadata["risk_explanation"]
+                        finding_dict["suggested_fix"] = finding.metadata["suggested_fix"]
                 findings_dicts.append(finding_dict)
             
             if generate_reports:
@@ -429,7 +439,7 @@ class AICodeScanner:
                 'scan_id': scan_id,
                 'file_name': file_data['file_name'],
                 'language': file_data['language'],
-                'total_findings': len(all_findings),
+                'total_findings': len(verdicted),
                 'severity_counts': severity_counts,
                 'scan_duration_ms': scan_duration_ms,
                 'findings': findings_dicts,
@@ -678,7 +688,7 @@ if __name__ == "__main__":
     
     # Create scanner instance
     with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
-        print("KnightCheck Scanner initialized!")
+        print("Open Nazca Scanner initialized!")
         print("Ready to scan files. Example usage:")
         print("  results = scanner.scan_file('path/to/code.py')")
 

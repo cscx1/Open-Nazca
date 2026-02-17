@@ -45,4 +45,5 @@ temp/
 BenchmarkPython/
 semgrep-tests/
 dvpwa/
+bandit-tests/
 

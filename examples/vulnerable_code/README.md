@@ -1,8 +1,8 @@
 # Example Vulnerable Code
 
-This directory contains intentionally vulnerable code examples for testing the AI Code Breaker scanner.
+This directory contains intentionally vulnerable code examples for testing the Open Nazca scanner.
 
-## ⚠️ WARNING
+## WARNING
 
 **These files contain intentional security vulnerabilities for demonstration purposes only.**
 
@@ -21,9 +21,9 @@ Demonstrates unsafe concatenation of user input into AI prompts.
 - Using `.format()` with user queries
 - Mixing system prompts with user content
 
-**Test Command:**
+**Test command** (from the Open Nazca repo root):
 ```bash
-python -m src.scanner examples/vulnerable_code/example1_prompt_injection.py
+python -m src examples/vulnerable_code/example1_prompt_injection.py
 ```
 
 ### 2. Hardcoded Secrets (`example2_hardcoded_secrets.py`)
@@ -35,9 +35,9 @@ Shows various ways API keys and credentials can be exposed in code.
 - Database passwords in connection strings
 - GitHub and Slack tokens exposed
 
-**Test Command:**
+**Test command** (from the Open Nazca repo root):
 ```bash
-python -m src.scanner examples/vulnerable_code/example2_hardcoded_secrets.py
+python -m src examples/vulnerable_code/example2_hardcoded_secrets.py
 ```
 
 ### 3. Over-Privileged Tools (`example3_overprivileged_tools.py`)
@@ -49,9 +49,9 @@ Illustrates AI agents with excessive permissions.
 - Database DROP operations
 - Using `eval()` with AI-generated code
 
-**Test Command:**
+**Test command** (from the Open Nazca repo root):
 ```bash
-python -m src.scanner examples/vulnerable_code/example3_overprivileged_tools.py
+python -m src examples/vulnerable_code/example3_overprivileged_tools.py
 ```
 
 ## Safe Alternatives

@@ -504,7 +504,7 @@ TECHNICAL STRENGTHS TO EMPHASIZE
 
 4. PERFORMANCE
    - Regex is O(n) - scales linearly with code size
-   - CodeTester.py (191 lines) scanned in 17 milliseconds
+   - examples/CodeTester.py (191 lines) scanned in 17 milliseconds
    - Can handle large codebases efficiently
 
 5. EXTENSIBILITY
