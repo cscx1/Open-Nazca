@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Run scanner + remediator on Test3.py and print all suggested fixes
-to compare with Test3_remediated_secure.py.
+Run scanner + remediator on tests/regression/Test3.py and print suggested fixes
+(conceptually compared to tests/regression/Test3_remediated_secure.py).
 
 Usage (from repo root):
     python scripts/run_test3_remediation_check.py
@@ -22,9 +22,9 @@ from src.analysis.remediator import FunctionalRemediator
 from src.analysis.reachability import ReachabilityStatus
 
 def main():
-    path = REPO_ROOT / "Test3.py"
+    path = REPO_ROOT / "tests" / "regression" / "Test3.py"
     if not path.exists():
-        print("Test3.py not found in repo root")
+        print("tests/regression/Test3.py not found")
         sys.exit(1)
 
     # Use scanner to get ingestion + detectors + taint + reachability
@@ -68,7 +68,7 @@ def main():
 
     # Output
     print("=" * 70)
-    print("SCANNER SUGGESTED FIXES FOR Test3.py")
+    print("SCANNER SUGGESTED FIXES FOR tests/regression/Test3.py")
     print("=" * 70)
     print()
 
@@ -96,7 +96,7 @@ def main():
         print()
 
     print("=" * 70)
-    print("COMPARISON WITH Test3_remediated_secure.py")
+    print("COMPARISON WITH tests/regression/Test3_remediated_secure.py")
     print("=" * 70)
     by_type = {}
     for d in diffs:

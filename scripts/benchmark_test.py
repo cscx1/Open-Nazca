@@ -2,7 +2,7 @@
 """
 OWASP Benchmark accuracy test harness.
 
-Runs the LLMCheck scanner against all 1230 OWASP BenchmarkPython test cases
+Runs the Open Nazca scanner against all 1230 OWASP BenchmarkPython test cases
 and computes per-category and overall accuracy metrics.
 
 Usage (from repo root):
