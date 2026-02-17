@@ -24,7 +24,7 @@ def setup_logging(verbose: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='🔒 KnightCheck - Security Scanner',
+        description='🔒 Open Nazca - Security Scanner',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -133,7 +133,7 @@ Examples:
         parser.print_help()
         return 1
     
-    # Handle UI command (main app: KnightCheck Security Analytics)
+    # Handle UI command (main app: Open Nazca Security Analytics)
     if args.command == 'ui':
         try:
             import streamlit.web.cli as stcli

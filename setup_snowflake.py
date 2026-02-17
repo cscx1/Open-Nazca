@@ -110,7 +110,7 @@ def setup_rag_schema(conn):
 
 def main():
     print("\n" + "=" * 70)
-    print("❄️  Unified KnightCheck Snowflake Setup")
+    print("❄️  Unified Open Nazca Snowflake Setup")
     print("=" * 70)
     
     # Check SQL file
