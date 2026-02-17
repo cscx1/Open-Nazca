@@ -5,7 +5,7 @@ if __name__ == "__main__":
     try:
         from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
         if get_script_run_ctx() is None:
-            print("DLLM CheckMate is a Streamlit app. Run with: streamlit run app.py")
+            print("Open Nazca is a Streamlit app. Run with: streamlit run app.py")
             sys.exit(1)
     except Exception:
         pass
@@ -31,7 +31,7 @@ import networkx as nx
 
 # Page configuration
 st.set_page_config(
-    page_title="DLLM CheckMate",
+    page_title="Open Nazca",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -426,7 +426,7 @@ def main():
         # Logo Area
         st.markdown("""
         <div class="sidebar-logo-container">
-            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -1px;"><span style="color: #F43F5E;">DLLM </span><span style="color: #ffffff;">CheckMate</span></h1>
+            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -1px;"><span style="color: #F43F5E;">Open </span><span style="color: #ffffff;">Nazca</span></h1>
             <p style="color: #64748B; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;">Security Analytics</p>
         </div>
         """, unsafe_allow_html=True)
@@ -821,6 +821,7 @@ def render_scan_results_detailed(results):
             {
                 "Type": f['vulnerability_type'],
                 "Severity": f['severity'],
+                "Verdict": f.get('verdict_status', ''),
                 "Line": f.get('line_number', 'N/A'),
                 "Description": f['description'],
                 "Detector": f['detector_name']
@@ -850,12 +851,16 @@ def render_scan_results_detailed(results):
             safe_vuln_type = html_module.escape(finding['vulnerability_type'])
             safe_line = html_module.escape(str(finding.get('line_number', 'N/A')))
             safe_desc = html_module.escape(finding['description'])
+            verdict_status = finding.get('verdict_status', '')
+            verdict_reason = finding.get('verdict_reason', '')
+            verdict_html = f'<span style="color:#94A3B8;font-size:12px;">Verdict: <strong>{html_module.escape(verdict_status)}</strong>' + (f' — {html_module.escape(verdict_reason)}' if verdict_reason else '') + '</span>' if verdict_status else ''
             st.markdown(f"""
             <div style="background: #0F2744; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155;">
                 <span class="{sev_class}">{safe_severity}</span>
                 <span style="color: #A0AEBC; margin-left: 10px; font-weight: 600;">{safe_vuln_type}</span>
                 <span style="float: right; color: #64748B; font-size: 12px;">Line {safe_line}</span>
                 <p style="color: #E2E8F0; margin-top: 10px; font-size: 14px;">{safe_desc}</p>
+                {verdict_html}
             </div>
             """, unsafe_allow_html=True)
             
