@@ -1,5 +1,5 @@
 """
-Setup script for AI Code Breaker
+Setup script
 """
 
 from setuptools import setup, find_packages
