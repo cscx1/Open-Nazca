@@ -415,6 +415,11 @@ class ReportGenerator:
         if finding.get('sink_api'):
             md += f"**Sink API:** `{finding['sink_api']}`\n\n"
 
+        # Evidence summary (standardized one-line)
+        ev = finding.get('evidence', {})
+        if ev.get('evidence_summary'):
+            md += f"**Evidence:** {ev['evidence_summary']}\n\n"
+
         # Add attack path if available
         apath = finding.get('attack_path')
         if apath:
@@ -521,6 +526,16 @@ class ReportGenerator:
             <div class="section-title">⚖️ Verdict:</div>
             <span style="font-weight:bold;">{html_module.escape(finding.get('verdict_status', ''))}</span>
             <p style="margin-top:4px;font-size:0.9em;color:#555;">{vreason}</p>
+        </div>
+"""
+
+        # Evidence summary (standardized one-line)
+        ev = finding.get('evidence', {})
+        if ev.get('evidence_summary'):
+            html_out += f"""
+        <div class="section">
+            <div class="section-title">📋 Evidence:</div>
+            <p style="font-size:0.9em;">{html_module.escape(ev['evidence_summary'])}</p>
         </div>
 """
 
@@ -729,6 +744,17 @@ class ReportGenerator:
         output += f"  🔵 Low:      {summary['by_severity'].get('LOW', 0)}\n"
         output += f"  ─────────────────────\n"
         output += f"  Total:      {summary['total']}\n\n"
+        
+        # Per-finding list: line, vulnerability type, severity
+        if findings:
+            output += "FINDINGS:\n"
+            for i, f in enumerate(findings, 1):
+                line = f.get('line_number', '?')
+                vtype = f.get('vulnerability_type', 'Unknown')
+                sev = f.get('severity', 'UNKNOWN')
+                emoji = self.severity_emojis.get(sev, '  ')
+                output += f"  {i}. Line {line}: {vtype} ({emoji} {sev})\n"
+            output += "\n"
         
         if summary['by_type']:
             output += "BY TYPE:\n"
