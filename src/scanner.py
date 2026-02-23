@@ -46,6 +46,8 @@ from .llm_reasoning import LLMAnalyzer
 from .snowflake_integration import SnowflakeClient
 from .report_generation import ReportGenerator
 from .rag_manager import RAGManager
+from . import evidence
+from . import diff_scope
 
 # Analysis pipeline
 from .analysis.taint_tracker import TaintTracker
@@ -162,7 +164,9 @@ class AICodeScanner:
         file_path: str,
         scanned_by: str = "system",
         generate_reports: bool = True,
-        report_formats: List[str] = None
+        report_formats: List[str] = None,
+        diff_text: Optional[str] = None,
+        path_in_diff: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Scan a single code file for security vulnerabilities.
@@ -172,6 +176,8 @@ class AICodeScanner:
             scanned_by: User or system initiating the scan
             generate_reports: Whether to generate report files
             report_formats: List of report formats ('json', 'html', 'markdown')
+            diff_text: Optional unified diff; when set, only findings in changed lines are reported
+            path_in_diff: Path of this file as it appears in the diff (defaults to file_path)
         
         Returns:
             Dictionary containing scan results
@@ -349,19 +355,19 @@ class AICodeScanner:
                             metadata=finding_dict.get('metadata')
                         )
             
-            # Calculate statistics
+            # Calculate statistics (full counts for Snowflake)
             scan_duration_ms = int((time.time() - start_time) * 1000)
-            severity_counts = self._count_by_severity([fwv.finding for fwv in verdicted])
+            severity_counts_full = self._count_by_severity([fwv.finding for fwv in verdicted])
             
-            # Update Snowflake with statistics
+            # Update Snowflake with statistics (full scan counts)
             if self.use_snowflake:
                 self.snowflake_client.update_scan_statistics(
                     scan_id=scan_id,
                     total_findings=len(verdicted),
-                    critical_count=severity_counts.get('CRITICAL', 0),
-                    high_count=severity_counts.get('HIGH', 0),
-                    medium_count=severity_counts.get('MEDIUM', 0),
-                    low_count=severity_counts.get('LOW', 0),
+                    critical_count=severity_counts_full.get('CRITICAL', 0),
+                    high_count=severity_counts_full.get('HIGH', 0),
+                    medium_count=severity_counts_full.get('MEDIUM', 0),
+                    low_count=severity_counts_full.get('LOW', 0),
                     scan_duration_ms=scan_duration_ms
                 )
             
@@ -377,7 +383,7 @@ class AICodeScanner:
                 'scan_duration_ms': scan_duration_ms
             }
             
-            # Convert findings to dictionaries for reports (include verdict)
+            # Convert findings to dictionaries for reports (include verdict + evidence block)
             findings_dicts = []
             for fwv in verdicted:
                 finding_dict = fwv.to_dict()
@@ -390,7 +396,21 @@ class AICodeScanner:
                     elif "risk_explanation" in finding.metadata:
                         finding_dict["risk_explanation"] = finding.metadata["risk_explanation"]
                         finding_dict["suggested_fix"] = finding.metadata["suggested_fix"]
-                findings_dicts.append(finding_dict)
+                findings_dicts.append(evidence.with_evidence(finding_dict))
+
+            # Optional: scope to diff (only report findings in changed regions)
+            if diff_text:
+                changed = diff_scope.parse_unified_diff(diff_text)
+                path_key = path_in_diff if path_in_diff is not None else file_path
+                findings_dicts = diff_scope.filter_findings_by_diff(
+                    findings_dicts, path_key, changed
+                )
+                if changed:
+                    logger.info(f"  Diff scope: {len(findings_dicts)} findings in changed lines")
+
+            # Severity counts and total for reports/return (diff-scoped when diff_text set)
+            severity_counts = self._count_by_severity_from_dicts(findings_dicts)
+            total_findings_for_report = len(findings_dicts)
             
             if generate_reports:
                 # Create reports directory
@@ -439,7 +459,7 @@ class AICodeScanner:
                 'scan_id': scan_id,
                 'file_name': file_data['file_name'],
                 'language': file_data['language'],
-                'total_findings': len(verdicted),
+                'total_findings': total_findings_for_report,
                 'severity_counts': severity_counts,
                 'scan_duration_ms': scan_duration_ms,
                 'findings': findings_dicts,
@@ -659,6 +679,15 @@ class AICodeScanner:
         counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
         for finding in findings:
             severity = finding.severity
+            if severity in counts:
+                counts[severity] += 1
+        return counts
+
+    def _count_by_severity_from_dicts(self, findings_dicts: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Count findings by severity from list of finding dicts (e.g. after diff filter)."""
+        counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+        for f in findings_dicts:
+            severity = f.get('severity', 'LOW')
             if severity in counts:
                 counts[severity] += 1
         return counts

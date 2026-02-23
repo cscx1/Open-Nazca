@@ -1,6 +1,6 @@
 # Open Nazca
 
-Security scanner for source code: pattern-based detection, taint analysis for reachability, and a verdict layer (Confirmed / Out-of-scope / Unverified). Optional LLM analysis and Snowflake storage. Reports in JSON, HTML, or Markdown.
+Open-Nazca is a security scanner for AI-written source and manual code (e.g. code generated or edited by LLMs): pattern-based detection, taint analysis for reachability, and a verdict layer (Confirmed / Out-of-scope / Unverified). Optional LLM analysis and Snowflake storage. Reports in JSON, HTML, or Markdown.
 
 Run via CLI, Streamlit UI, or Python API.
 
@@ -96,14 +96,16 @@ with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
 
 ## Testing
 
-Example scans:
+Testing is done primarily via the **Streamlit UI** (`streamlit run app.py`): upload files and run scans there for clear, per-finding results.
+
+Quick CLI checks on example files:
 
 ```bash
 python cli.py scan examples/vulnerable_code/example1_prompt_injection.py --no-llm
 python cli.py scan examples/vulnerable_code/example2_hardcoded_secrets.py --no-llm
 ```
 
-Scripts (from repo root):
+Regression and benchmark scripts (from repo root):
 
 - `python scripts/validate_test3_regressions.py` — regression tests
 - `python scripts/run_test3_remediation_check.py` — remediator vs reference

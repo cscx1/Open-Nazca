@@ -86,6 +86,12 @@ Examples:
         action='store_true',
         help='Enable verbose output'
     )
+    scan_parser.add_argument(
+        '--diff',
+        type=str,
+        metavar='PATH',
+        help='Path to unified diff file; only report findings in changed lines'
+    )
     
     # Scan directory command
     scandir_parser = subparsers.add_parser('scan-dir', help='Scan a directory')
@@ -164,11 +170,20 @@ Examples:
                 print(f"❌ File not found: {args.file}")
                 return 1
             
+            diff_text = None
+            if getattr(args, 'diff', None):
+                try:
+                    diff_text = Path(args.diff).read_text(encoding='utf-8', errors='replace')
+                except Exception as e:
+                    print(f"❌ Failed to read diff file: {e}")
+                    return 1
             results = scanner.scan_file(
                 file_path=args.file,
                 scanned_by="cli_user",
                 generate_reports=True,
-                report_formats=args.format
+                report_formats=args.format,
+                diff_text=diff_text,
+                path_in_diff=args.file if diff_text else None,
             )
             
             if results['success']:
