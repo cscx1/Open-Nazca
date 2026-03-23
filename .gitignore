@@ -14,7 +14,9 @@ env/
 ENV/
 .venv
 
-# IDEs
+# IDEs / editor (local Cursor config; do not commit)
+.cursor/
+
 .vscode/
 .idea/
 *.swp
@@ -46,4 +48,7 @@ BenchmarkPython/
 semgrep-tests/
 dvpwa/
 bandit-tests/
+
+# Nested clone (own .git); keep local only — do not commit as submodule
+everything-claude-code/
 

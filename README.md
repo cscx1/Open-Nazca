@@ -18,7 +18,22 @@ cp .env.example .env
 # Edit .env if using Snowflake or LLM (OpenAI/Anthropic)
 ```
 
-**Web UI:**
+**Web UI (Next.js + FastAPI):**
+
+Run both services in separate terminals:
+
+```bash
+# Terminal 1 — FastAPI backend (from project root)
+source venv/bin/activate
+uvicorn api.main:app --reload --port 8000
+
+# Terminal 2 — Next.js frontend
+cd web && npm run dev
+```
+
+Open http://localhost:3000.
+
+**Legacy Streamlit UI:**
 
 ```bash
 streamlit run app.py

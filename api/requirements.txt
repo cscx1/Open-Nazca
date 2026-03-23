@@ -1,0 +1,6 @@
+# FastAPI layer — packages not already in the project's root requirements.txt
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
