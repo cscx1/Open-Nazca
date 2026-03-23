@@ -36,7 +36,6 @@ setup(
         "snowflake-snowpark-python>=1.11.1",
         "openai>=1.12.0",
         "anthropic>=0.18.1",
-        "streamlit>=1.31.0",
         "pandas>=2.2.0",
         "python-dotenv>=1.0.0",
         "pyyaml>=6.0.1",

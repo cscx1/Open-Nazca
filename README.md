@@ -2,7 +2,7 @@
 
 Open-Nazca is a security scanner for AI-written source and manual code (e.g. code generated or edited by LLMs): pattern-based detection, taint analysis for reachability, and a verdict layer (Confirmed / Out-of-scope / Unverified). Optional LLM analysis and Snowflake storage. Reports in JSON, HTML, or Markdown.
 
-Run via CLI, Streamlit UI, or Python API.
+Run via CLI, web UI (Next.js + FastAPI), or Python API.
 
 ---
 
@@ -32,14 +32,6 @@ cd web && npm run dev
 ```
 
 Open http://localhost:3000.
-
-**Legacy Streamlit UI:**
-
-```bash
-streamlit run app.py
-```
-
-Open http://localhost:8501 to upload files and run scans.
 
 **CLI:**
 
@@ -75,7 +67,7 @@ Snowflake setup: [docs/SNOWFLAKE_SETUP.md](docs/SNOWFLAKE_SETUP.md).
 |--------|-------------|
 | `python cli.py scan <file>` | Scan one file |
 | `python cli.py scan-dir <dir>` | Scan directory (`--recursive` for subdirs) |
-| `python cli.py ui` | Launch Streamlit app |
+| `python cli.py ui` | Print how to run the web UI (FastAPI + Next.js) |
 
 Options: `--snowflake`, `--no-llm`, `--format html markdown`.
 
@@ -94,8 +86,9 @@ with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
 
 | Path | Purpose |
 |------|--------|
-| `app.py` | Streamlit UI |
 | `cli.py` | CLI entrypoint |
+| `api/` | FastAPI backend for the web UI |
+| `web/` | Next.js frontend |
 | `src/scanner.py` | Pipeline orchestrator |
 | `src/ingestion/` | File read, language detection |
 | `src/detectors/` | Pattern-based detectors |
@@ -111,7 +104,7 @@ with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
 
 ## Testing
 
-Testing is done primarily via the **Streamlit UI** (`streamlit run app.py`): upload files and run scans there for clear, per-finding results.
+Testing is done via the **web UI** (see Quick start above), **CLI** (below), or automated scripts.
 
 Quick CLI checks on example files:
 

@@ -42,6 +42,9 @@ Examples:
   
   # Generate only HTML report
   python cli.py scan myfile.py --format html
+
+  # Print how to run the Next.js + FastAPI web UI
+  python cli.py ui
         """
     )
     
@@ -130,34 +133,28 @@ Examples:
         help='Enable verbose output'
     )
     
-    # Web UI command
-    ui_parser = subparsers.add_parser('ui', help='Launch web interface')
-    ui_parser.add_argument(
-        '--port',
-        type=int,
-        default=8501,
-        help='Port to run UI on (default: 8501)'
+    # Web UI (Next.js + FastAPI; Streamlit app.py removed)
+    ui_parser = subparsers.add_parser(
+        'ui',
+        help='Show how to run the web UI (FastAPI + Next.js)',
     )
-    
+
     args = parser.parse_args()
     
     if not args.command:
         parser.print_help()
         return 1
     
-    # Handle UI command (main app: Open Nazca Security Analytics)
     if args.command == 'ui':
-        try:
-            import streamlit.web.cli as stcli
-            import sys
-            
-            app_path = str(Path(__file__).parent / 'app.py')
-            sys.argv = ['streamlit', 'run', app_path, '--server.port', str(args.port)]
-            sys.exit(stcli.main())
-        except ImportError:
-            print("❌ Streamlit not installed. Run: pip install streamlit")
-            return 1
-    
+        print(
+            "The Streamlit UI was removed. Run the web app in two terminals:\n\n"
+            "  1) Backend:  uvicorn api.main:app --reload --port 8000\n"
+            "  2) Frontend: cd web && npm run dev\n\n"
+            "Then open http://localhost:3000\n"
+            "(See README.md for details.)"
+        )
+        return 0
+
     # Handle scan commands
     setup_logging(args.verbose)
     

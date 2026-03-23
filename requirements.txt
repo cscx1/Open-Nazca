@@ -16,8 +16,7 @@ langchain-community>=0.0.10
 langchain-text-splitters>=0.0.1
 pypdf>=3.0.0
 
-# UI and Reporting
-streamlit>=1.31.0
+# Charts / data (optional; was used with legacy Streamlit UI)
 pandas>=2.2.0
 plotly>=5.18.0
 
