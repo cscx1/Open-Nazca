@@ -90,13 +90,13 @@ class AICodeScanner:
         logger.info("Initializing Open Nazca Scanner...")
         
         self.ingestion = CodeIngestion(max_file_size_mb=max_file_size_mb)
-        logger.info("✓ Code ingestion module loaded")
+        logger.info("Code ingestion module loaded")
         
         # Initialize RAG Manager (for policy context)
         self.rag_manager = None
         try:
             self.rag_manager = RAGManager()
-            logger.info("✓ RAG Manager initialized")
+            logger.info("RAG Manager initialized")
         except Exception as e:
             logger.warning(f"RAG Manager init failed: {e}")
         
@@ -124,7 +124,7 @@ class AICodeScanner:
             EvasionPatternsDetector(enabled=True),
             OperationalSecurityDetector(enabled=True),
         ]
-        logger.info(f"✓ Loaded {len(self.detectors)} vulnerability detectors")
+        logger.info(f"Loaded {len(self.detectors)} vulnerability detectors")
         
         # Initialize LLM analyzer (if enabled)
         if self.use_llm_analysis:
@@ -134,7 +134,7 @@ class AICodeScanner:
                     provider=llm_provider,
                     rag_manager=self.rag_manager
                 )
-                logger.info(f"✓ LLM analyzer initialized ({llm_provider})")
+                logger.info(f"LLM analyzer initialized ({llm_provider})")
             except Exception as e:
                 logger.warning(f"LLM analyzer not available: {e}. Using fallback mode.")
                 self.use_llm_analysis = False
@@ -143,7 +143,7 @@ class AICodeScanner:
         if self.use_snowflake:
             try:
                 self.snowflake_client = SnowflakeClient()
-                logger.info("✓ Snowflake client connected")
+                logger.info("Snowflake client connected")
             except Exception as e:
                 logger.warning(f"Snowflake not available: {e}. Results won't be persisted.")
                 self.use_snowflake = False
@@ -151,13 +151,13 @@ class AICodeScanner:
         # Initialize analysis pipeline
         self.taint_tracker = TaintTracker()
         self.reachability_verifier = ReachabilityVerifier()
-        logger.info("✓ Analysis pipeline loaded (taint tracker + reachability verifier)")
+        logger.info("Analysis pipeline loaded (taint tracker + reachability verifier)")
 
         # Initialize report generator
         self.report_generator = ReportGenerator()
-        logger.info("✓ Report generator loaded")
+        logger.info("Report generator loaded")
         
-        logger.info("🚀 Open Nazca Scanner ready!")
+        logger.info("Open Nazca Scanner ready!")
     
     def scan_file(
         self,
@@ -187,19 +187,19 @@ class AICodeScanner:
         
         start_time = time.time()
         logger.info(f"\n{'='*70}")
-        logger.info(f"🔍 Starting security scan: {file_path}")
+        logger.info(f"Starting security scan: {file_path}")
         logger.info(f"{'='*70}")
         
         try:
             # Step 1: Ingest the code file
-            logger.info("\n[1/5] Ingesting code file...")
+            logger.info("\n[1/6] Ingesting code file...")
             file_data = self.ingestion.ingest_file(file_path)
-            logger.info(f"✓ Ingested {file_data['line_count']} lines of {file_data['language']} code")
+            logger.info(f"Ingested {file_data['line_count']} lines of {file_data['language']} code")
             
             # Step 2: Store in Snowflake (if enabled)
             scan_id = None
             if self.use_snowflake:
-                logger.info("\n[2/5] Storing in Snowflake...")
+                logger.info("\n[2/6] Storing in Snowflake...")
                 scan_id = self.snowflake_client.insert_code_scan(
                     file_name=file_data['file_name'],
                     file_path=file_data['file_path'],
@@ -209,13 +209,13 @@ class AICodeScanner:
                     scanned_by=scanned_by,
                     metadata=file_data['metadata']
                 )
-                logger.info(f"✓ Stored with scan_id: {scan_id}")
+                logger.info(f"Stored with scan_id: {scan_id}")
             else:
-                logger.info("\n[2/5] Skipping Snowflake storage (disabled)")
+                logger.info("\n[2/6] Skipping Snowflake storage (disabled)")
                 scan_id = f"local-{int(time.time())}"
             
             # Step 3: Run vulnerability detectors
-            logger.info("\n[3/5] Running vulnerability detectors...")
+            logger.info("\n[3/6] Running vulnerability detectors...")
             all_findings: List[Finding] = []
             
             for detector in self.detectors:
@@ -227,15 +227,15 @@ class AICodeScanner:
                         file_name=file_data['file_name']
                     )
                     all_findings.extend(findings)
-                    logger.info(f"  ✓ Found {len(findings)} issues")
+                    logger.info(f"  Found {len(findings)} issues")
             
             # Deduplicate findings - keep only one finding per line per vulnerability type
             all_findings = self._deduplicate_findings(all_findings)
             
-            logger.info(f"✓ Detection complete: {len(all_findings)} total vulnerabilities found")
+            logger.info(f"Detection complete: {len(all_findings)} total vulnerabilities found")
             
             # Step 3.5: AST-based taint analysis + attack-path graph + reachability
-            logger.info("\n[3.5/5] Running static analysis pipeline...")
+            logger.info("\n[4/6] Running static analysis pipeline...")
             attack_paths_data = []
             reachability_data = []
             try:
@@ -247,7 +247,7 @@ class AICodeScanner:
                         graph = AttackGraph()
                         graph.add_nodes_and_edges(nodes, edges)
                         attack_paths = graph.enumerate_attack_paths()
-                        logger.info(f"  ✓ Built attack graph: {graph.node_count} nodes, "
+                        logger.info(f"  Built attack graph: {graph.node_count} nodes, "
                                     f"{graph.edge_count} edges, {len(attack_paths)} paths")
                         
                         # Verify reachability
@@ -279,7 +279,7 @@ class AICodeScanner:
                     logger.info(f"  AST analysis not yet supported for {file_data['language']} "
                                 f"— using pattern-based results only")
             except Exception as e:
-                logger.warning(f"  ⚠ Analysis pipeline error: {e}")
+                logger.warning(f"  Analysis pipeline error: {e}")
 
             # Verdict layer: context-aware classification (reduces false positives)
             project_root = str(Path(file_path).resolve().parent)
@@ -289,11 +289,11 @@ class AICodeScanner:
                 file_data["file_path"],
                 file_data["code_content"],
             )
-            logger.info(f"  ✓ Verdict layer: {len(verdicted)} findings classified")
+            logger.info(f"  Verdict layer: {len(verdicted)} findings classified")
 
             # Step 4: LLM Analysis (if enabled)
             if self.use_llm_analysis and verdicted:
-                logger.info(f"\n[4/5] Running LLM analysis on {len(verdicted)} findings with 15 parallel workers...")
+                logger.info(f"\n[5/6] Running LLM analysis on {len(verdicted)} findings with 15 parallel workers...")
                 
                 # Use batch_analyze for parallel processing (on underlying findings)
                 findings_for_llm = [fwv.finding for fwv in verdicted]
@@ -327,14 +327,14 @@ class AICodeScanner:
                                 suggested_fix=analysis['suggested_fix']
                             )
                         
-                        logger.info(f"  ✓ Stored finding {i}/{len(analyzed_results)}")
+                        logger.info(f"  Stored finding {i}/{len(analyzed_results)}")
                         
                     except Exception as e:
-                        logger.warning(f"  ⚠ Failed to store finding {i}: {e}")
+                        logger.warning(f"  Failed to store finding {i}: {e}")
                 
-                logger.info("✓ LLM analysis complete")
+                logger.info("LLM analysis complete")
             else:
-                logger.info("\n[4/5] Skipping LLM analysis")
+                logger.info("\n[5/6] Skipping LLM analysis")
                 
                 # Still insert findings into Snowflake without LLM analysis
                 if self.use_snowflake and verdicted:
@@ -372,7 +372,7 @@ class AICodeScanner:
                 )
             
             # Step 5: Generate reports
-            logger.info("\n[5/5] Generating reports...")
+            logger.info("\n[6/6] Generating reports...")
             report_paths = {}
             
             scan_data = {
@@ -444,7 +444,7 @@ class AICodeScanner:
                     )
                     report_paths['markdown'] = md_path
                 
-                logger.info(f"✓ Generated {len(report_paths)} report(s)")
+                logger.info(f"Generated {len(report_paths)} report(s)")
             
             # Print console summary
             console_summary = self.report_generator.generate_console_summary(
@@ -468,13 +468,13 @@ class AICodeScanner:
                 'reachability': reachability_data,
             }
             
-            logger.info(f"\n✅ Scan complete! Duration: {scan_duration_ms}ms")
+            logger.info(f"\nScan complete! Duration: {scan_duration_ms}ms")
             logger.info(f"{'='*70}\n")
             
             return results
             
         except Exception as e:
-            logger.error(f"✗ Scan failed: {e}", exc_info=True)
+            logger.error(f"Scan failed: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),
@@ -556,7 +556,6 @@ class AICodeScanner:
                 matched.attack_path = path.to_dict()
                 matched.sink_api = path.sink.name
                 # Upgrade classification if analysis gives more specific type
-                from .analysis.sink_classifier import SinkClassifier
                 sink_info = SinkClassifier.classify(path.sink.name)
                 if sink_info:
                     matched.vulnerability_type = sink_info.vulnerability_type
@@ -564,7 +563,6 @@ class AICodeScanner:
                     matched.cwe_id = sink_info.cwe_id
             else:
                 # Create a new finding from the AST analysis
-                from .analysis.sink_classifier import SinkClassifier
                 sink_info = SinkClassifier.classify(path.sink.name)
                 new_finding = Finding(
                     detector_name="StaticAnalysisPipeline",
@@ -654,7 +652,7 @@ class AICodeScanner:
         Returns:
             List of scan results for each file
         """
-        logger.info(f"📁 Scanning directory: {directory_path}")
+        logger.info(f"Scanning directory: {directory_path}")
         
         # Ingest all files
         files_data = self.ingestion.ingest_directory(
@@ -671,7 +669,7 @@ class AICodeScanner:
             )
             results.append(result)
         
-        logger.info(f"✅ Directory scan complete: {len(results)} files scanned")
+        logger.info(f"Directory scan complete: {len(results)} files scanned")
         return results
     
     def _count_by_severity(self, findings: List[Finding]) -> Dict[str, int]:
@@ -696,7 +694,7 @@ class AICodeScanner:
         """Clean up resources."""
         if self.use_snowflake and hasattr(self, 'snowflake_client'):
             self.snowflake_client.close()
-        logger.info("✓ Scanner closed")
+        logger.info("Scanner closed")
     
     def __enter__(self):
         """Context manager entry."""
@@ -707,17 +705,35 @@ class AICodeScanner:
         self.close()
 
 
-# Example usage
 if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    import sys as _sys
+
+    logging.basicConfig(level=logging.WARNING)  # suppress INFO noise during self-test
+
+    _fixture = (
+        Path(__file__).resolve().parent.parent
+        / "examples" / "vulnerable_code" / "example1_prompt_injection.py"
     )
-    
-    # Create scanner instance
-    with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
-        print("Open Nazca Scanner initialized!")
-        print("Ready to scan files. Example usage:")
-        print("  results = scanner.scan_file('path/to/code.py')")
+    if not _fixture.exists():
+        print(f"SKIP  fixture not found: {_fixture}")
+        _sys.exit(0)
+
+    print(f"Self-test: scanning {_fixture.name} ...")
+    with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as _scanner:
+        _results = _scanner.scan_file(
+            file_path=str(_fixture),
+            generate_reports=False,
+        )
+
+    if not _results.get("success"):
+        print(f"FAIL  scan returned success=False: {_results.get('error')}")
+        _sys.exit(1)
+
+    _n = _results["total_findings"]
+    if _n == 0:
+        print("FAIL  no findings returned for known-vulnerable fixture")
+        _sys.exit(1)
+
+    print(f"PASS  {_n} finding(s) detected in {_results['scan_duration_ms']}ms")
+    _sys.exit(0)
 
