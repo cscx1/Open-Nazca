@@ -43,6 +43,12 @@ Thumbs.db
 uploads/
 temp/
 
+# Generated scan output (never commit reports or temp upload dirs)
+# Leading slash anchors the pattern to the repo root so src/reports/ is NOT affected.
+/reports/
+/temp_scans/
+/knowledge_base/
+
 # Optional benchmark / test data (large; clone separately if needed)
 BenchmarkPython/
 semgrep-tests/

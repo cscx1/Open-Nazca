@@ -7,8 +7,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
-from api.core import job_store
-from api.core.config import settings
+from api.config import job_store
+from api.config.config import settings
 from api.models.requests import ScanConfig
 from api.services import scan_service
 

@@ -15,7 +15,7 @@ if _PROJECT_ROOT not in sys.path:
 
 from src.scanner import AICodeScanner  # noqa: E402
 from api.models.requests import ScanConfig  # noqa: E402
-from api.core.job_store import get_job  # noqa: E402
+from api.config.job_store import get_job  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

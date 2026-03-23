@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from api.core.job_store import get_job
+from api.config.job_store import get_job
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

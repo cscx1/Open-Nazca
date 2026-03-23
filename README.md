@@ -94,9 +94,9 @@ with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
 | `src/detectors/` | Pattern-based detectors |
 | `src/analysis/` | Taint tracker, attack graph, reachability, remediator |
 | `src/verdict/` | Verdict engine and rules |
-| `src/llm_reasoning/` | LLM analysis (Cortex, OpenAI, Anthropic) |
-| `src/snowflake_integration/` | Scan/finding storage |
-| `src/report_generation/` | JSON / HTML / Markdown reports |
+| `src/llm/` | LLM analysis (Cortex, OpenAI, Anthropic) |
+| `src/snowflake/` | Scan/finding storage |
+| `src/reports/` | JSON / HTML / Markdown reports |
 | `config/` | config.yaml, Snowflake schema |
 | `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [FULL_PROGRAM_MAP.md](docs/FULL_PROGRAM_MAP.md), [SNOWFLAKE_SETUP.md](docs/SNOWFLAKE_SETUP.md) |
 

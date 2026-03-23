@@ -160,8 +160,8 @@ For each file, the scanner runs in this order:
    - **Enrich** `all_findings`: attach `reachability_status`, `attack_path`, and sink classification to matching findings; add new findings for paths that pattern detectors did not report.  
    - Deduplicate again.
 5. **Verdict** (`src/verdict/`) — ContextAggregator gathers project/file context; VerdictEngine runs rules (e.g. taint_reachability, sql_sanitizer) → each finding gets a Verdict (Confirmed / Out-of-scope / Unverified) → `verdicted` (list of FindingWithVerdict).
-6. **Optional LLM** (`src/llm_reasoning/`) — Batch analyze the underlying findings for `risk_explanation` and `suggested_fix` (Snowflake Cortex or OpenAI/Anthropic); store in Snowflake and in finding metadata.
-7. **Reports** (`src/report_generation/`) — Build JSON, HTML, Markdown (and console summary) from `scan_data` and `findings_dicts` (including verdict, reachability, attack_path, LLM fields).
+6. **Optional LLM** (`src/llm/`) — Batch analyze the underlying findings for `risk_explanation` and `suggested_fix` (Snowflake Cortex or OpenAI/Anthropic); store in Snowflake and in finding metadata.
+7. **Reports** (`src/reports/`) — Build JSON, HTML, Markdown (and console summary) from `scan_data` and `findings_dicts` (including verdict, reachability, attack_path, LLM fields).
 
 So: **ingest → detect (pattern) → taint → graph → reachability → enrich → verdict → LLM (optional) → reports.** Taint tracking is the step that produces the data-flow graph; the graph is then used for path enumeration and reachability.
 
@@ -204,15 +204,15 @@ So: **verdict** = the classification result; **rules** = the logic that produces
 - **VerdictEngine**: Applies rules in precedence order. Unverified does not stop; Confirmed or Out-of-scope can terminate. Optional extra_rules.
 - **Rules** (in `src/verdict/rules/`): environment_neutralizer (test/examples → Unverified), xss_context (HTML/JS + reachable + entry → Confirmed; no web → Out-of-scope), sql_sanitizer (parameterized markers → Out-of-scope), input_validation (allowlist/sanitize on same line → Out-of-scope), taint_reachability (Confirmed Reachable → Confirmed), pattern_only_fallback (no attack_path / reachability None or Unverifiable → Unverified). See `verdict/RULES_ORDER.md` for order and how to add rules.
 
-### 5. LLM reasoning (`src/llm_reasoning/`)
+### 5. LLM analysis (`src/llm/`)
 
 - **LLMAnalyzer**: Batch analysis of findings; calls Snowflake Cortex or OpenAI/Anthropic for `risk_explanation` and `suggested_fix`; returns enriched results. Optional; scanner works with `--no-llm`.
 
-### 6. Snowflake integration (`src/snowflake_integration/`)
+### 6. Snowflake (`src/snowflake/`)
 
 - **SnowflakeClient**: Insert code scan, insert finding, update finding with LLM fields, update scan statistics. Credentials from env. See [SNOWFLAKE_SETUP.md](SNOWFLAKE_SETUP.md).
 
-### 7. Report generation (`src/report_generation/`)
+### 7. Reports (`src/reports/`)
 
 - **ReportGenerator**: Builds JSON, HTML, and Markdown from scan_data and findings (including `verdict_status`, `verdict_reason` when present); writes to `reports/` or given path; console summary as well.
 

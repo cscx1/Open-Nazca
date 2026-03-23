@@ -1,4 +1,4 @@
-"""Snowflake integration module for data persistence."""
+"""Snowflake module for data persistence."""
 
 from .snowflake_client import SnowflakeClient
 

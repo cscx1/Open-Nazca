@@ -78,7 +78,7 @@ SNOWFLAKE_ROLE=ACCOUNTADMIN
 
 ```bash
 # Test Python connection
-python -c "from src.snowflake_integration import SnowflakeClient; client = SnowflakeClient(); print('✅ Connected!'); client.close()"
+python -c "from src.snowflake import SnowflakeClient; client = SnowflakeClient(); print('✅ Connected!'); client.close()"
 ```
 
 ### 5. Run Your First Scan

@@ -6,7 +6,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
-from api.core import job_store
+from api.config import job_store
 from api.services import sandbox_service
 
 router = APIRouter()

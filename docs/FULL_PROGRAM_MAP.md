@@ -178,7 +178,7 @@ What the entire Open Nazca program is doing now. Every folder and file listed wi
 
 ---
 
-## src/llm_reasoning/
+## src/llm/
 
 | File | Purpose |
 |------|---------|
@@ -187,7 +187,7 @@ What the entire Open Nazca program is doing now. Every folder and file listed wi
 
 ---
 
-## src/snowflake_integration/
+## src/snowflake/
 
 | File | Purpose |
 |------|---------|
@@ -196,7 +196,7 @@ What the entire Open Nazca program is doing now. Every folder and file listed wi
 
 ---
 
-## src/report_generation/
+## src/reports/
 
 | File | Purpose |
 |------|---------|
@@ -242,6 +242,6 @@ These are not in the repo or are ignored; the program or scripts reference them 
    - **ReachabilityVerifier** (analysis) → status per path.
    - **scanner** enriches findings with reachability and attack_path.
    - **VerdictEngine** (verdict): project/file context, then rules (environment → XSS → SQL sanitizer → taint reachability → pattern fallback) → **FindingWithVerdict** per finding.
-   - Optional: **LLMAnalyzer** (llm_reasoning) → risk_explanation, suggested_fix; optional **SnowflakeClient** store.
-   - **ReportGenerator** (report_generation) → JSON/HTML/MD and console summary (includes verdict_status, verdict_reason).
+   - Optional: **LLMAnalyzer** (llm) → risk_explanation, suggested_fix; optional **SnowflakeClient** store.
+   - **ReportGenerator** (reports) → JSON/HTML/MD and console summary (includes verdict_status, verdict_reason).
 3. Result returned to CLI or app (findings with verdict, attack_paths, reachability).

@@ -42,10 +42,10 @@ from .detectors import (
     Finding,
 )
 from .detectors.vuln_ownership import is_owner
-from .llm_reasoning import LLMAnalyzer
-from .snowflake_integration import SnowflakeClient
-from .report_generation import ReportGenerator
-from .rag_manager import RAGManager
+from .llm import LLMAnalyzer
+from .snowflake import SnowflakeClient
+from .reports import ReportGenerator
+from .rag import RAGManager
 from . import evidence
 from . import diff_scope
 

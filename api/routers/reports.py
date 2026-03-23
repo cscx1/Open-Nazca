@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from api.core import job_store
+from api.config import job_store
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -70,5 +70,5 @@ async def download_report(scan_id: str, format: str):
 
 def _all_jobs():
     """Return all jobs from the in-memory store."""
-    from api.core.job_store import _jobs
+    from api.config.job_store import _jobs
     return list(_jobs.values())
