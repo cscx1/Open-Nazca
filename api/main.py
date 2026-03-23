@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers import scans, stream, sandbox, knowledge_base, reports
-from api.core.config import settings
-from api.core import errors
+from api.config.config import settings
+from api.config import errors
 
 logging.basicConfig(
     level=logging.INFO,

@@ -1,5 +1,5 @@
 """
-Setup script
+Setup script for Open Nazca
 """
 
 from setuptools import setup, find_packages
@@ -10,14 +10,12 @@ readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text() if readme_file.exists() else ""
 
 setup(
-    name="ai-code-breaker",
+    name="open-nazca",
     version="1.0.0",
-    author="Your Hackathon Team",
-    author_email="team@example.com",
-    description="LLM Security Scanner for AI Systems",
+    description="Open Nazca — Security scanner for LLM-assisted and AI-generated code",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/LLMCheck",
+    url="https://github.com/dzane1/LLMCheck",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -25,12 +23,11 @@ setup(
         "Topic :: Security",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     install_requires=[
         "snowflake-connector-python>=3.7.0",
         "snowflake-snowpark-python>=1.11.1",

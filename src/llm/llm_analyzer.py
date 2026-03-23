@@ -377,10 +377,7 @@ Do NOT use markdown formatting (no ##, **, _, etc.) in your response.
         Call Snowflake Cortex LLM for analysis.
         Uses Snowflake's built-in LLM capabilities.
         """
-        try:
-            from .snowflake_integration import SnowflakeClient
-        except ImportError:
-            from src.snowflake_integration import SnowflakeClient
+        from src.snowflake import SnowflakeClient
         
         try:
             with SnowflakeClient() as client:

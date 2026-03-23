@@ -1,4 +1,4 @@
-"""Report generation module for security scan results."""
+"""Reports module for security scan results."""
 
 from .report_generator import ReportGenerator
 

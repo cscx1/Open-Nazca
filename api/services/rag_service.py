@@ -1,5 +1,5 @@
 """
-Thin adapter over src.rag_manager.RAGManager.
+Thin adapter over src.rag.RAGManager.
 Lazily initialises a single shared manager instance.
 """
 
@@ -11,7 +11,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from src.rag_manager import RAGManager  # noqa: E402
+from src.rag import RAGManager  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

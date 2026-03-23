@@ -90,7 +90,7 @@ def run_sandbox(
     file_contents: mapping of filename → raw bytes
     Returns SandboxResults dict matching web/lib/types.ts SandboxResults.
     """
-    from api.core.job_store import get_job
+    from api.config.job_store import get_job
 
     job = get_job(job_id)
 
