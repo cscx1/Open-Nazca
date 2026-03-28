@@ -73,17 +73,17 @@ def setup_rag_schema(conn):
     cursor = conn.cursor()
     try:
         # 1. Create Database (Idempotent)
-        print("... Verifying Database LLMCHECK_DB")
-        cursor.execute("CREATE DATABASE IF NOT EXISTS LLMCHECK_DB")
+        print("... Verifying Database OPEN_NAZCA_DB")
+        cursor.execute("CREATE DATABASE IF NOT EXISTS OPEN_NAZCA_DB")
         
         # 2. Create Schema
         print("... Verifying Schema RAG")
-        cursor.execute("CREATE SCHEMA IF NOT EXISTS LLMCHECK_DB.RAG")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS OPEN_NAZCA_DB.RAG")
         
         # 3. Create Vector Table
         print("... Verifying Table DOCUMENT_CHUNKS (Vector: 768)")
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS LLMCHECK_DB.RAG.DOCUMENT_CHUNKS (
+        CREATE TABLE IF NOT EXISTS OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS (
             ID VARCHAR(36) DEFAULT UUID_STRING(),
             CHUNK_TEXT VARCHAR,
             EMBEDDING VECTOR(FLOAT, 768),
@@ -95,7 +95,7 @@ def setup_rag_schema(conn):
         
         # 4. Enable Change Tracking
         try:
-            cursor.execute("ALTER TABLE LLMCHECK_DB.RAG.DOCUMENT_CHUNKS SET CHANGE_TRACKING = TRUE")
+            cursor.execute("ALTER TABLE OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS SET CHANGE_TRACKING = TRUE")
             print("... Change Tracking Enabled")
         except Exception:
             pass # Might already be on

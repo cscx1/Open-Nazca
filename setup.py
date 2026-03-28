@@ -15,7 +15,7 @@ setup(
     description="Open Nazca — Security scanner for LLM-assisted and AI-generated code",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/dzane1/LLMCheck",
+    url="https://github.com/cscx1/Open-Nazca",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -49,7 +49,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "llmcheck=cli:main",
+            "open-nazca=cli:main",
         ],
     },
 )

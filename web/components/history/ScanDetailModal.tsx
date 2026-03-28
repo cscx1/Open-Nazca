@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Download, Clock, FileCode2, ShieldOff, AlertOctagon, Timer } from 'lucide-react'
+import { X, Clock, FileCode2, ShieldOff, AlertOctagon, Timer } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'

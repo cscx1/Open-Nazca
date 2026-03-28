@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { sankey, sankeyLinkHorizontal, type SankeyGraph, type SankeyLink, type SankeyNode } from 'd3-sankey'
+import { useMemo, useState } from 'react'
+import { sankey, sankeyLinkHorizontal, type SankeyGraph } from 'd3-sankey'
 import type { SandboxResults, AttackPath } from '@/lib/types'
 import { SeverityBadge } from '@/components/ui/severity-badge'
 import { cn } from '@/lib/utils'
@@ -19,9 +19,6 @@ interface SankeyLinkData {
   severity: string
   [key: string]: unknown   // satisfies SankeyExtraProperties
 }
-
-type RenderNode = SankeyNode<SankeyNodeData, SankeyLinkData>
-type RenderLink = SankeyLink<SankeyNodeData, SankeyLinkData>
 
 /* ─── Input graph types (string ids allowed before layout) ──────────────── */
 interface InputLink {
@@ -84,12 +81,9 @@ function SankeyChart({
   width?: number
   height?: number
 }) {
-  const svgRef = useRef<SVGSVGElement>(null)
-  const [rendered, setRendered] = useState<{ nodes: RenderNode[]; links: RenderLink[] } | null>(null)
-
-  useEffect(() => {
+  const rendered = useMemo(() => {
     const { nodes, links } = buildSankeyData(paths, eliminatedPaths)
-    if (!nodes.length) { setRendered(null); return }
+    if (!nodes.length) return null
 
     try {
       // d3-sankey resolves string source/target ids via nodeId(); cast input
@@ -106,9 +100,9 @@ function SankeyChart({
         .extent([[16, 16], [width - 16, height - 16]])
 
       const result = layout(graph)
-      setRendered({ nodes: result.nodes, links: result.links })
+      return { nodes: result.nodes, links: result.links }
     } catch {
-      setRendered(null)
+      return null
     }
   }, [paths, eliminatedPaths, width, height])
 
@@ -123,7 +117,7 @@ function SankeyChart({
   const linkPath = sankeyLinkHorizontal()
 
   return (
-    <svg ref={svgRef} width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       <defs>
         {['active', 'eliminated'].map((kind) => (
           <linearGradient key={kind} id={`link-grad-${kind}`} x1="0%" y1="0%" x2="100%" y2="0%">

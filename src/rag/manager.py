@@ -15,7 +15,7 @@ load_dotenv()
 class RAGManager:
     """
     Manages the RAG system using SNOWFLAKE as the Vector Database.
-    Indexes documents into LLMCHECK_DB.RAG.DOCUMENT_CHUNKS.
+    Indexes documents into OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS.
     Uses Snowflake Cortex for Embeddings (Arctic) and Generation.
     """
     
@@ -37,7 +37,7 @@ class RAGManager:
                 password=os.getenv("SNOWFLAKE_PASSWORD"),
                 account=os.getenv("SNOWFLAKE_ACCOUNT"),
                 warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-                database="LLMCHECK_DB",
+                database="OPEN_NAZCA_DB",
                 schema="RAG"
             )
             logger.info("Connected to Snowflake for RAG.")
@@ -54,7 +54,7 @@ class RAGManager:
         
         cursor = self.conn.cursor()
         try:
-            cursor.execute("SELECT DISTINCT SOURCE_FILE FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS ORDER BY SOURCE_FILE")
+            cursor.execute("SELECT DISTINCT SOURCE_FILE FROM OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS ORDER BY SOURCE_FILE")
             return [row[0] for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"Failed to list documents: {e}")
@@ -120,7 +120,7 @@ class RAGManager:
                     source = chunk.metadata.get('source', 'unknown')
                     
                     query = """
-                    INSERT INTO LLMCHECK_DB.RAG.DOCUMENT_CHUNKS (CHUNK_TEXT, EMBEDDING, SOURCE_FILE)
+                    INSERT INTO OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS (CHUNK_TEXT, EMBEDDING, SOURCE_FILE)
                     SELECT 
                         %s,
                         SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', %s),
@@ -155,7 +155,7 @@ class RAGManager:
         cursor = self.conn.cursor()
         try:
             # SECURITY FIX: Use parameterized query instead of string interpolation
-            cursor.execute("DELETE FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS WHERE SOURCE_FILE = %s", (filename,))
+            cursor.execute("DELETE FROM OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS WHERE SOURCE_FILE = %s", (filename,))
             return f"🗑️ Deleted '{filename}'."
         except Exception as e:
             return f"Failed to delete: {e}"
@@ -175,7 +175,7 @@ class RAGManager:
             # SECURITY FIX: Use parameterized query instead of string interpolation
             search_sql = """
             SELECT CHUNK_TEXT, SOURCE_FILE
-            FROM LLMCHECK_DB.RAG.DOCUMENT_CHUNKS
+            FROM OPEN_NAZCA_DB.RAG.DOCUMENT_CHUNKS
             ORDER BY VECTOR_COSINE_SIMILARITY(
                 SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m', %s),
                 EMBEDDING

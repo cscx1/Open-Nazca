@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FlaskConical, ShieldOff, Scan, Timer, AlertOctagon } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -29,6 +29,8 @@ export function AnalysisClient() {
   const { state, startScan, reset } = useScanJob()
   const addEntry = useAddScanEntry()
   const config = useConfigStore()
+  const lastRecordedScanIdRef = useRef<string | null>(null)
+  const lastErrorToastRef = useRef<string | null>(null)
 
   const isScanning = state.phase === 'uploading' || state.phase === 'streaming'
 
@@ -42,18 +44,28 @@ export function AnalysisClient() {
     })
   }
 
-  // When scan completes, persist to history and toast
   const results = state.results
-  useMemo(() => {
+
+  useEffect(() => {
+    if (state.phase === 'idle') {
+      lastErrorToastRef.current = null
+      lastRecordedScanIdRef.current = null
+      return
+    }
     if (state.phase === 'complete' && results && file) {
+      const sid = results.scan_id
+      if (sid && lastRecordedScanIdRef.current === sid) return
+      if (sid) lastRecordedScanIdRef.current = sid
       addEntry.mutate({ filename: file.name, results })
       toast.success('Scan complete', { description: `${results.total_findings} finding(s) found` })
+      return
     }
     if (state.phase === 'error' && state.error) {
+      if (lastErrorToastRef.current === state.error) return
+      lastErrorToastRef.current = state.error
       toast.error('Scan failed', { description: state.error })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase])
+  }, [state.phase, state.error, results, file, addEntry])
 
   const filteredFindings = useMemo(
     () => (results?.findings ?? []).filter((f) => activeFilters.includes(f.severity)),

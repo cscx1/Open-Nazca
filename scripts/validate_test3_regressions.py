@@ -27,7 +27,7 @@ from src.analysis.remediator import _fix_command_injection, _fix_code_execution
 
 
 def _scan_snippet(code: str, name: str):
-    with tempfile.TemporaryDirectory(prefix="llmcheck_reg_") as td:
+    with tempfile.TemporaryDirectory(prefix="open_nazca_reg_") as td:
         p = Path(td) / name
         p.write_text(code, encoding="utf-8")
         with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:

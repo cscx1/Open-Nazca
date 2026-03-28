@@ -1,21 +1,17 @@
 """
 Thin adapter over src.scanner.AICodeScanner.
 Only this file (and sandbox_service.py) are allowed to import from src/.
+
+Requires the project to be installed in editable mode (`pip install -e .`)
+so that the `src` package is resolvable without sys.path manipulation.
 """
 
-import sys
-import os
 import logging
 import asyncio
 
-# Ensure the project root is on sys.path so src imports work.
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-
-from src.scanner import AICodeScanner  # noqa: E402
-from api.models.requests import ScanConfig  # noqa: E402
-from api.config.job_store import get_job  # noqa: E402
+from src.scanner import AICodeScanner
+from api.models.requests import ScanConfig
+from api.config.job_store import get_job
 
 logger = logging.getLogger(__name__)
 

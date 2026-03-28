@@ -52,6 +52,32 @@ type SortDir = 'asc' | 'desc'
 
 const SEVERITY_ORDER: Record<Severity, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 
+function FindingsSortButton({
+  field,
+  label,
+  active,
+  onSort,
+}: {
+  field: SortField
+  label: string
+  active: boolean
+  onSort: (field: SortField) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className={cn(
+        'flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors',
+        active ? 'text-indigo-400' : 'text-[#64748B] hover:text-[#94A3B8]'
+      )}
+    >
+      {label}
+      <ArrowUpDown className="w-3 h-3" />
+    </button>
+  )
+}
+
 interface FindingsTableProps {
   findings: Finding[]
 }
@@ -84,29 +110,37 @@ export function FindingsTable({ findings }: FindingsTableProps) {
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  function SortButton({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field
-    return (
-      <button
-        onClick={() => handleSort(field)}
-        className={cn('flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors', active ? 'text-indigo-400' : 'text-[#64748B] hover:text-[#94A3B8]')}
-      >
-        {label}
-        <ArrowUpDown className="w-3 h-3" />
-      </button>
-    )
-  }
-
   return (
     <div className="rounded border border-[#334155] overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-[#0F172A] border-b border-[#334155] hover:bg-[#0F172A]">
             <TableHead className="w-8 text-center text-[#475569] text-[10px]">#</TableHead>
-            <TableHead><SortButton field="vulnerability_type" label="Type" /></TableHead>
-            <TableHead><SortButton field="severity" label="Severity" /></TableHead>
+            <TableHead>
+              <FindingsSortButton
+                field="vulnerability_type"
+                label="Type"
+                active={sortField === 'vulnerability_type'}
+                onSort={handleSort}
+              />
+            </TableHead>
+            <TableHead>
+              <FindingsSortButton
+                field="severity"
+                label="Severity"
+                active={sortField === 'severity'}
+                onSort={handleSort}
+              />
+            </TableHead>
             <TableHead className="text-[10px] uppercase tracking-wider text-[#64748B]">Verdict</TableHead>
-            <TableHead><SortButton field="line_number" label="Line" /></TableHead>
+            <TableHead>
+              <FindingsSortButton
+                field="line_number"
+                label="Line"
+                active={sortField === 'line_number'}
+                onSort={handleSort}
+              />
+            </TableHead>
             <TableHead className="text-[10px] uppercase tracking-wider text-[#64748B]">Description</TableHead>
             <TableHead className="text-[10px] uppercase tracking-wider text-[#64748B]">Detector</TableHead>
           </TableRow>

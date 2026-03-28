@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "open-nazca"
+version = "1.0.0"
+description = "Open Nazca — Security scanner for LLM-assisted and AI-generated code"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "snowflake-connector-python>=3.7.0",
+    "snowflake-snowpark-python>=1.11.1",
+    "openai>=1.12.0",
+    "anthropic>=0.18.1",
+    "networkx>=3.2",
+    "pandas>=2.2.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.1",
+    "requests>=2.31.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+api = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+]
+
+[project.scripts]
+open-nazca = "cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "api*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

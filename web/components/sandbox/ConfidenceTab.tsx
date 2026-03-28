@@ -2,7 +2,6 @@
 
 import { ShieldCheck, ShieldOff, HelpCircle, Eye, AlertTriangle } from 'lucide-react'
 import type { SandboxResults, ReachabilityResult } from '@/lib/types'
-import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 type ReachabilityStatus = ReachabilityResult['status']

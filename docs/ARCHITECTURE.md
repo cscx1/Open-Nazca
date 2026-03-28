@@ -1,6 +1,6 @@
 # Architecture — Open Nazca
 
-This document describes the system architecture for **Open Nazca**: a security scanner that ingests code, runs pattern-based and flow-based detectors, applies a verdict layer, optionally enriches findings with an LLM, and produces reports. For a file-by-file map of the repo, see [FULL_PROGRAM_MAP.md](FULL_PROGRAM_MAP.md).
+This document describes the system architecture for **Open Nazca**: a security scanner that ingests code, runs pattern-based and flow-based detectors, applies a verdict layer, optionally enriches findings with an LLM, and produces reports.
 
 ---
 
@@ -26,7 +26,7 @@ We extended the scanner from **pattern-only detection** to **flow-based analysis
 - **`src/analysis/sink_classifier.py`** — Maps API names (e.g. `cursor.execute`) to vulnerability type, CWE, severity (single source of truth for sink classification).
 - **`src/analysis/remediator.py`** — Generates functional code fixes (parameterized SQL, `subprocess.run(shell=False)`, env vars for secrets, etc.) and rejects comment-only changes.
 
-**Flow change in the scanner:** After pattern detection and deduplication, we run the analysis pipeline (taint → graph → reachability), enrich findings with `reachability_status` and `attack_path`, then pass the enriched findings into the verdict layer and LLM. Reports and Snowflake now include attack paths and reachability. The Sandbox Lab in the Streamlit app runs the full pipeline twice (before and after fixes) and uses the same math (set comparison of paths, percentage reduction) to show blast radius and confidence.
+**Flow change in the scanner:** After pattern detection and deduplication, we run the analysis pipeline (taint → graph → reachability), enrich findings with `reachability_status` and `attack_path`, then pass the enriched findings into the verdict layer and LLM. Reports and Snowflake now include attack paths and reachability. The Sandbox Lab in the web UI runs the full pipeline twice (before and after fixes) and uses the same math (set comparison of paths, percentage reduction) to show blast radius and confidence.
 
 ---
 
@@ -117,12 +117,12 @@ One code file (path + contents) enters; language is inferred from file extension
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          User interface                                  │
-│  ┌─────────────────┐  ┌─────────────────┐                              │
-│  │ Streamlit (app)  │  │ CLI (cli.py)    │  → scan, scan-dir, ui        │
-│  │ Open Nazca UI   │  │ --snowflake,    │                              │
-│  └────────┬────────┘  │ --no-llm, etc.  │                              │
-│           └───────────┴────────┬────────┘                              │
-└────────────────────────────────┼────────────────────────────────────────┘
+│  ┌───────────────────────────┐  ┌─────────────────┐                   │
+│  │ Web UI (Next.js + FastAPI) │  │ CLI (cli.py)    │                   │
+│  │  web/   api/              │  │ --snowflake,    │                   │
+│  └────────────┬──────────────┘  │ --no-llm, etc.  │                   │
+│               └─────────────────┴────────┬─────────┘                   │
+└──────────────────────────────────────────┼─────────────────────────────┘
                                  ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    Scanner orchestrator (src/scanner.py)                 │
@@ -184,7 +184,7 @@ So: **ingest → detect (pattern) → taint → graph → reachability → enric
 - **SinkClassifier**: Registry of call name → SinkInfo (vulnerability type, CWE, severity). Used by AttackGraph for library-accurate classification of each path.
 - **AttackGraph**: Builds a NetworkX directed graph from taint nodes/edges; enumerates all simple paths from every source to every sink (`nx.all_simple_paths`, cutoff=15); wraps each path as an AttackPath with SinkClassifier info. Provides `compare(before_paths, after_paths)` for eliminated/remaining/introduced paths.
 - **ReachabilityVerifier**: For each attack path, inspects the code along the path for known sanitizers (per vulnerability type) and parameterized-query patterns; assigns ReachabilityStatus (Confirmed Reachable, Reachability Eliminated, Unverifiable, Requires Manual Review).
-- **Remediator** (FunctionalRemediator): Takes source code and reachability results; for Confirmed Reachable paths, applies fix strategies (e.g. parameterized SQL, `subprocess.run(shell=False)`, env vars for secrets); validates that each change is functional (not comment-only). Returns fixed code and list of RemediationDiff. Used in the Sandbox Lab to generate and verify fixes.
+- **Remediator** (FunctionalRemediator): Takes source code and reachability results; for Confirmed Reachable paths, applies fix strategies (e.g. parameterized SQL, `subprocess.run(shell=False)`, env vars for secrets); validates that each change is functional (not comment-only). Returns fixed code and list of RemediationDiff. Used in the web UI Sandbox Lab to generate and verify fixes.
 
 ### 4. Verdict (`src/verdict/`) and rules (`src/verdict/rules/`)
 
@@ -216,14 +216,14 @@ So: **verdict** = the classification result; **rules** = the logic that produces
 
 - **ReportGenerator**: Builds JSON, HTML, and Markdown from scan_data and findings (including `verdict_status`, `verdict_reason` when present); writes to `reports/` or given path; console summary as well.
 
-### 8. RAG (`src/rag_manager.py`)
+### 8. RAG (`src/rag/`)
 
-- Used by the Streamlit app: index documents, retrieve context for LLM. Optional for the analyzer.
+- **RAGManager** (`src/rag/manager.py`): index documents, retrieve context for LLM enrichment. Initialized best-effort by the scanner and exposed in the web UI knowledge-base tab. Optional; scanner continues if init fails.
 
 ## Data flow (single scan)
 
 ```
-User → CLI or app.py
+User → CLI (cli.py)  or  Web UI (Next.js → FastAPI → api/services/scan_service.py)
   → AICodeScanner.scan_file(path)
     → CodeIngestion → file_data
     → [optional] SnowflakeClient → scan_id
@@ -254,8 +254,8 @@ User → CLI or app.py
 
 ## Technology
 
-- **Python**: Security tooling, LLM and Snowflake SDKs, fast iteration.
-- **Snowflake**: Analytics, schema in `config/snowflake_schema.sql`; see SNOWFLAKE_SETUP.md.
-- **Streamlit**: Open Nazca Security Analytics UI (app.py); RAG, sandbox, report viewing.
-
-For a complete list of every folder and file, see [FULL_PROGRAM_MAP.md](FULL_PROGRAM_MAP.md).
+- **Python**: Security tooling, LLM and Snowflake SDKs, fast iteration. Core scanner lives in `src/`; FastAPI backend in `api/`.
+- **FastAPI + uvicorn**: HTTP layer for the web UI; routes in `api/routers/`, services in `api/services/`. SSE streaming for real-time scan progress.
+- **Next.js**: Frontend (`web/`); proxies all `/api/*` calls to FastAPI. Pages for analysis upload, scan history, sandbox, and knowledge base.
+- **Snowflake** (optional): Analytics and persistence; schema in `config/snowflake_schema.sql`. See [SNOWFLAKE_SETUP.md](SNOWFLAKE_SETUP.md).
+- **NetworkX**: Attack-path graph enumeration in `src/analysis/attack_graph.py`.

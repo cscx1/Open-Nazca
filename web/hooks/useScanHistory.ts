@@ -21,6 +21,14 @@ function saveHistory(entries: ScanHistoryEntry[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
 }
 
+/** Prepend entry; drop any existing row with the same scan_id (idempotent). */
+function prependDeduped(entry: ScanHistoryEntry, maxEntries: number): ScanHistoryEntry[] {
+  const sid = entry.results.scan_id
+  const prev = loadHistory()
+  const rest = sid ? prev.filter((e) => e.results.scan_id !== sid) : prev
+  return [entry, ...rest].slice(0, maxEntries)
+}
+
 export function useScanHistory() {
   const qc = useQueryClient()
 
@@ -37,7 +45,7 @@ export function useScanHistory() {
         timestamp: new Date().toISOString(),
         results,
       }
-      const updated = [entry, ...loadHistory()].slice(0, 50)
+      const updated = prependDeduped(entry, 50)
       saveHistory(updated)
       qc.setQueryData<ScanHistoryEntry[]>(QUERY_KEY, updated)
     },
@@ -64,7 +72,7 @@ export function useAddScanEntry() {
         timestamp: new Date().toISOString(),
         results,
       }
-      const updated = [entry, ...loadHistory()].slice(0, 50)
+      const updated = prependDeduped(entry, 50)
       saveHistory(updated)
       return updated
     },

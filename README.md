@@ -13,6 +13,7 @@ Run via CLI, web UI (Next.js + FastAPI), or Python API.
 ```bash
 git clone https://github.com/cscx1/Open-Nazca.git
 cd Open-Nazca
+pip install -e .          # installs src/ and api/ as packages; required for imports
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env if using Snowflake or LLM (OpenAI/Anthropic)
@@ -98,7 +99,7 @@ with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
 | `src/snowflake/` | Scan/finding storage |
 | `src/reports/` | JSON / HTML / Markdown reports |
 | `config/` | config.yaml, Snowflake schema |
-| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [FULL_PROGRAM_MAP.md](docs/FULL_PROGRAM_MAP.md), [SNOWFLAKE_SETUP.md](docs/SNOWFLAKE_SETUP.md) |
+| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [SNOWFLAKE_SETUP.md](docs/SNOWFLAKE_SETUP.md), [verdict/RULES_ORDER.md](docs/verdict/RULES_ORDER.md) |
 
 ---
 
