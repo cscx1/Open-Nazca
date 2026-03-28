@@ -100,5 +100,5 @@ snowflake:
 logging:
   level: INFO
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: logs/llmcheck.log
+  file: logs/open-nazca.log
 

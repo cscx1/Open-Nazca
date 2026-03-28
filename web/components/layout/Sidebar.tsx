@@ -105,13 +105,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </>
       )}
 
-      {/* Footer — only shown when expanded */}
-      {!collapsed && (
-        <div className="px-4 py-3 border-t border-[#334155] space-y-1">
-          <p className="text-[10px] text-[#475569] uppercase tracking-wider whitespace-nowrap">HoyaHack 2026</p>
-          <p className="text-[10px] text-[#475569] uppercase tracking-wider whitespace-nowrap">Powered by Snowflake Cortex</p>
-        </div>
-      )}
+
+      {/* Spacer so the toggle button doesn't overlap content above */}
+      <div className="h-12 shrink-0" />
 
       {/* Collapse toggle — centered at bottom, always within sidebar bounds */}
       <button

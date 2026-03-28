@@ -24,7 +24,7 @@ def setup_logging(verbose: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='🔒 Open Nazca - Security Scanner',
+        description='Open Nazca - Security Scanner',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -167,7 +167,7 @@ Examples:
         ) as scanner:
             if args.command == 'scan':
                 if not Path(args.file).exists():
-                    print(f"❌ File not found: {args.file}")
+                    print(f"error: file not found: {args.file}")
                     return 1
 
                 diff_text = None
@@ -175,7 +175,7 @@ Examples:
                     try:
                         diff_text = Path(args.diff).read_text(encoding='utf-8', errors='replace')
                     except Exception as e:
-                        print(f"❌ Failed to read diff file: {e}")
+                        print(f"error: failed to read diff file: {e}")
                         return 1
 
                 results = scanner.scan_file(
@@ -188,22 +188,22 @@ Examples:
                 )
 
                 if results['success']:
-                    print(f"\n✅ Scan completed successfully!")
-                    print(f"   Found {results['total_findings']} vulnerabilities")
+                    print("\nScan completed successfully.")
+                    print(f"Found {results['total_findings']} vulnerabilities.")
 
                     if results.get('report_paths'):
-                        print(f"\n📄 Reports generated:")
+                        print("\nReports:")
                         for format_type, path in results['report_paths'].items():
                             print(f"   - {format_type.upper()}: {path}")
 
                     return 0 if results['total_findings'] == 0 else 1
                 else:
-                    print(f"❌ Scan failed: {results.get('error')}")
+                    print(f"error: scan failed: {results.get('error')}")
                     return 1
 
             elif args.command == 'scan-dir':
                 if not Path(args.directory).exists():
-                    print(f"❌ Directory not found: {args.directory}")
+                    print(f"error: directory not found: {args.directory}")
                     return 1
 
                 results = scanner.scan_directory(
@@ -215,17 +215,17 @@ Examples:
                 total_findings = sum(r.get('total_findings', 0) for r in results if r.get('success'))
                 successful_scans = sum(1 for r in results if r.get('success'))
 
-                print(f"\n✅ Directory scan completed!")
-                print(f"   Scanned {successful_scans}/{len(results)} files")
-                print(f"   Found {total_findings} total vulnerabilities")
+                print("\nDirectory scan completed.")
+                print(f"Scanned {successful_scans}/{len(results)} files.")
+                print(f"Found {total_findings} total vulnerabilities.")
 
                 return 0 if total_findings == 0 else 1
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Scan interrupted by user")
+        print("\n\nInterrupted by user.")
         return 130
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nerror: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()

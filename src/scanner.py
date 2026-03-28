@@ -1,13 +1,16 @@
 """
-Main Scanner Orchestrator for Open Nazca
+Main Scanner Orchestrator for Open Nazca.
 Coordinates the complete security scanning workflow.
 
-Pipeline:
-  1. Code ingestion
-  2. Pattern-based vulnerability detection
-  3. AST-based taint analysis  →  attack-path graph  →  reachability verification
-  4. LLM analysis (optional enrichment)
-  5. Report generation with trust-gradient classification
+Pipeline (one file):
+  1. Code ingestion      — read, validate, detect language
+  2. Pattern detection   — all detectors run in sequence; findings merged and deduped
+  3. AST taint analysis  — Python only: TaintTracker → AttackGraph → ReachabilityVerifier
+  4. Merge               — enrich detector findings with attack paths and reachability
+  5. Verdict             — VerdictEngine classifies each finding (Confirmed / Out-of-scope / Unverified)
+  6. LLM enrichment      — optional risk_explanation and suggested_fix via Cortex/OpenAI/Anthropic
+  7. Reports             — JSON / HTML / Markdown written to reports/; console summary
+  8. Snowflake           — optional persistence of scans and findings
 """
 
 import time
@@ -61,12 +64,16 @@ logger = logging.getLogger(__name__)
 
 class AICodeScanner:
     """
-    Main scanner orchestrator that coordinates the entire security scanning workflow:
-    1. Code ingestion
-    2. Vulnerability detection
-    3. LLM analysis (risk explanation + fixes)
-    4. Snowflake storage
-    5. Report generation
+    Main scanner orchestrator.
+
+    Coordinates: ingestion → pattern detection → AST taint analysis →
+    attack-graph / reachability → verdict layer → optional LLM enrichment →
+    reports. Snowflake storage is optional throughout.
+
+    Use as a context manager to ensure connections are closed:
+
+        with AICodeScanner(use_snowflake=False, use_llm_analysis=False) as scanner:
+            results = scanner.scan_file("path/to/code.py")
     """
     
     def __init__(

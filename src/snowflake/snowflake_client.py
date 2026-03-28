@@ -40,7 +40,7 @@ class SnowflakeClient:
                 account=os.getenv('SNOWFLAKE_ACCOUNT'),
                 user=os.getenv('SNOWFLAKE_USER'),
                 password=os.getenv('SNOWFLAKE_PASSWORD'),
-                database=os.getenv('SNOWFLAKE_DATABASE', 'LLMCHECK_DB'),
+                database=os.getenv('SNOWFLAKE_DATABASE', 'OPEN_NAZCA_DB'),
                 schema=os.getenv('SNOWFLAKE_SCHEMA', 'PUBLIC'),
                 warehouse=os.getenv('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
                 role=os.getenv('SNOWFLAKE_ROLE', 'ACCOUNTADMIN')

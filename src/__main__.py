@@ -26,7 +26,7 @@ def main():
     file_path = sys.argv[1]
     
     if not Path(file_path).exists():
-        print(f"Error: File not found: {file_path}")
+        print(f"error: file not found: {file_path}")
         sys.exit(1)
     
     print("Initializing scanner...")
@@ -39,9 +39,9 @@ def main():
     results = scanner.scan_file(file_path)
     
     if results['success']:
-        print(f"\n✅ Scan complete! Found {results['total_findings']} vulnerabilities")
+        print(f"\nScan complete. Found {results['total_findings']} vulnerabilities.")
     else:
-        print(f"\n❌ Scan failed: {results.get('error')}")
+        print(f"\nerror: scan failed: {results.get('error')}")
     
     scanner.close()
 

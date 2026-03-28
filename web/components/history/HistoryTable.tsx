@@ -52,6 +52,35 @@ type SortDir = 'asc' | 'desc'
 
 const SEVERITY_ORDER: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 
+function HistorySortButton({
+  field,
+  label,
+  active,
+  sortDir,
+  onSort,
+}: {
+  field: SortField
+  label: string
+  active: boolean
+  sortDir: SortDir
+  onSort: (field: SortField) => void
+}) {
+  const Icon = sortDir === 'asc' ? ChevronUp : ChevronDown
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className={cn(
+        'flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors',
+        active ? 'text-indigo-400' : 'text-[#64748B] hover:text-[#94A3B8]'
+      )}
+    >
+      {label}
+      {active && <Icon className="w-3 h-3" />}
+    </button>
+  )
+}
+
 interface HistoryTableProps {
   onRowClick: (entry: ScanHistoryEntry) => void
 }
@@ -78,23 +107,6 @@ export function HistoryTable({ onRowClick }: HistoryTableProps) {
     if (sortField === 'critical')  cmp = (a.results.severity_counts?.CRITICAL ?? 0) - (b.results.severity_counts?.CRITICAL ?? 0)
     return sortDir === 'asc' ? cmp : -cmp
   })
-
-  function SortBtn({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field
-    const Icon = sortDir === 'asc' ? ChevronUp : ChevronDown
-    return (
-      <button
-        onClick={() => handleSort(field)}
-        className={cn(
-          'flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors',
-          active ? 'text-indigo-400' : 'text-[#64748B] hover:text-[#94A3B8]'
-        )}
-      >
-        {label}
-        {active && <Icon className="w-3 h-3" />}
-      </button>
-    )
-  }
 
   if (history.length === 0) {
     return (
@@ -126,10 +138,42 @@ export function HistoryTable({ onRowClick }: HistoryTableProps) {
           <TableHeader>
             <TableRow className="bg-[#0F172A] border-b border-[#334155] hover:bg-[#0F172A]">
               <TableHead className="w-8 text-[#475569] text-[10px]">#</TableHead>
-              <TableHead><SortBtn field="filename" label="File" /></TableHead>
-              <TableHead><SortBtn field="timestamp" label="Date" /></TableHead>
-              <TableHead><SortBtn field="total" label="Total" /></TableHead>
-              <TableHead><SortBtn field="critical" label="Critical" /></TableHead>
+              <TableHead>
+                <HistorySortButton
+                  field="filename"
+                  label="File"
+                  active={sortField === 'filename'}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                />
+              </TableHead>
+              <TableHead>
+                <HistorySortButton
+                  field="timestamp"
+                  label="Date"
+                  active={sortField === 'timestamp'}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                />
+              </TableHead>
+              <TableHead>
+                <HistorySortButton
+                  field="total"
+                  label="Total"
+                  active={sortField === 'total'}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                />
+              </TableHead>
+              <TableHead>
+                <HistorySortButton
+                  field="critical"
+                  label="Critical"
+                  active={sortField === 'critical'}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                />
+              </TableHead>
               <TableHead className="text-[10px] uppercase tracking-wider text-[#64748B]">Severity Split</TableHead>
               <TableHead className="text-[10px] uppercase tracking-wider text-[#64748B]">Duration</TableHead>
             </TableRow>

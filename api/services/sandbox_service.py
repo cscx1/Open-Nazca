@@ -1,11 +1,12 @@
 """
-Sandbox pipeline adapter extracted from app.py _execute_sandbox_on_user_code().
-Runs the full 5-phase Identify → Analyse → Verify → Remediate → Re-verify flow.
+Sandbox service: runs the full 5-phase
+Identify → Analyse → Verify → Remediate → Re-verify pipeline.
 Only this file and scan_service.py may import from src/.
+
+Requires the project to be installed in editable mode (`pip install -e .`)
+so that the `src` package is resolvable without sys.path manipulation.
 """
 
-import sys
-import os
 import shutil
 import logging
 import asyncio
@@ -13,12 +14,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-
-from src.ingestion.code_ingestion import CodeIngestion  # noqa: E402
-from src.detectors import (  # noqa: E402
+from src.ingestion.code_ingestion import CodeIngestion
+from src.detectors import (
     PromptInjectionDetector,
     HardcodedSecretsDetector,
     OverprivilegedToolsDetector,
@@ -40,11 +37,11 @@ from src.detectors import (  # noqa: E402
     EvasionPatternsDetector,
     OperationalSecurityDetector,
 )
-from src.analysis.taint_tracker import TaintTracker  # noqa: E402
-from src.analysis.attack_graph import AttackGraph  # noqa: E402
-from src.analysis.sink_classifier import SinkClassifier  # noqa: E402
-from src.analysis.reachability import ReachabilityVerifier  # noqa: E402
-from src.analysis.remediator import FunctionalRemediator  # noqa: E402
+from src.analysis.taint_tracker import TaintTracker
+from src.analysis.attack_graph import AttackGraph
+from src.analysis.sink_classifier import SinkClassifier
+from src.analysis.reachability import ReachabilityVerifier
+from src.analysis.remediator import FunctionalRemediator
 
 logger = logging.getLogger(__name__)
 

@@ -3,13 +3,9 @@ Standalone tests for the Verdict Engine.
 Mocks various Finding scenarios: naked regex match vs confirmed taint path in a web app.
 """
 
-import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
-
-# Allow importing from project root
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.detectors import Finding
 from src.verdict import VerdictEngine, VerdictStatus

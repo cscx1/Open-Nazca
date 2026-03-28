@@ -5,8 +5,7 @@ Identifies user-controlled sources, tracks taint propagation through
 assignments, concatenation, and function arguments, and locates sinks
 where tainted data reaches security-sensitive API calls.
 
-This module analyses user-uploaded code only — the scanner's own
-codebase is never a target.
+This module analyses user-uploaded code only
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ from typing import Dict, List, Optional, Set, Tuple
 logger = logging.getLogger(__name__)
 
 
-# ── Taxonomy ─────────────────────────────────────────────────────
+# Taxonomy 
 
 class NodeKind(str, Enum):
     SOURCE = "source"
@@ -53,7 +52,7 @@ class TaintEdge:
     detail: str = ""
 
 
-# ── Known source / sink patterns ────────────────────────────────
+# Known source / sink patterns 
 
 # Source patterns: functions / attributes that produce user-controlled data.
 SOURCE_CALLS: Dict[str, str] = {
@@ -122,7 +121,7 @@ _QUICK_SINK_NAMES: Set[str] = {
 }
 
 
-# ── Helpers ──────────────────────────────────────────────────────
+# Helpers 
 
 def _dotted_name(node: ast.AST) -> str:
     """Reconstruct a dotted name from an AST node (e.g. ``os.system``)."""
@@ -170,7 +169,7 @@ def _is_sink_call(call_name: str) -> bool:
     return False
 
 
-# ── AST Visitor ──────────────────────────────────────────────────
+# AST Visitor
 
 class _TaintVisitor(ast.NodeVisitor):
     """Walk a Python AST and build taint nodes + edges."""
@@ -185,7 +184,7 @@ class _TaintVisitor(ast.NodeVisitor):
         self._func_params: Set[str] = set()
         self._current_func: Optional[str] = None
 
-    # ── function definitions ──────────────────────────────────
+    # function definitions 
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         prev_func = self._current_func
@@ -215,7 +214,7 @@ class _TaintVisitor(ast.NodeVisitor):
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
-    # ── assignments ───────────────────────────────────────────
+    # assignments 
 
     def visit_Assign(self, node: ast.Assign):
         rhs_taint = self._expr_taint(node.value)
@@ -241,7 +240,7 @@ class _TaintVisitor(ast.NodeVisitor):
                     self.tainted_vars[name] = xform
         self.generic_visit(node)
 
-    # ── calls ─────────────────────────────────────────────────
+    #calls 
 
     def visit_Call(self, node: ast.Call):
         cname = _call_name(node)
@@ -303,7 +302,7 @@ class _TaintVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-    # ── expression taint helpers ──────────────────────────────
+    #expression taint helpers
 
     def _expr_taint(self, node: ast.AST) -> Optional[TaintNode]:
         """Return the TaintNode that taints *node*, or None."""
@@ -478,7 +477,7 @@ class _TaintVisitor(ast.NodeVisitor):
         return []
 
 
-# ── Public API ───────────────────────────────────────────────────
+#Public API
 
 class TaintTracker:
     """
